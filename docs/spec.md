@@ -131,8 +131,8 @@ Table output is merged into the corresponding Markdown chunk.
 Concatenate all chunk Markdown files and generate a Table of Contents from headings.
 
 ```python
-# Implemented in Python (see §4.3) — not via shell cat
-merge_chunks("markdown/chunk-*.md", "merged.md")
+# Pseudocode — implemented in Python (see §4.3), not via shell cat
+merge_chunks(markdown_dir=Path("markdown"), output_path=Path("merged.md"), total_chunks=n)
 ```
 
 ```bash

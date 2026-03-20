@@ -254,9 +254,11 @@ Concatenation is implemented in Python (per §11.3 rule 3), not via shell `cat`:
 
 ```python
 # Pseudocode — see implementation for full version
-for md_path in sorted(markdown_dir.glob("chunk-*.md")):
-    out.write(md_path.read_text(encoding="utf-8"))
-    out.write("\n\n---\n\n")
+parts = [
+  md_path.read_text(encoding="utf-8")
+  for md_path in sorted(markdown_dir.glob("chunk-*.md"))
+]
+out.write("\n\n---\n\n".join(parts))
 ```
 
 Insert a horizontal rule (`---`) between chunks to preserve visual separation.

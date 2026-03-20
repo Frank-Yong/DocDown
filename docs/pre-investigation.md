@@ -104,8 +104,14 @@ Add:
 ## 5) Merge everything back
 
 ```python
-for md_path in sorted(markdown_dir.glob("chunk-*.md")):
-  out.write(md_path.read_text(encoding="utf-8"))
+# Pseudocode
+parts = [
+  md_path.read_text(encoding="utf-8")
+  for md_path in sorted(markdown_dir.glob("chunk-*.md"))
+]
+
+with output_path.open("w", encoding="utf-8", newline="") as out:
+  out.write("\n\n---\n\n".join(parts))
 ```
 
 ---
