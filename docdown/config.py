@@ -175,6 +175,9 @@ def _validate_semantics(cfg: Config) -> None:
         except OSError as exc:
             raise ConfigError(f"input file is not readable: {cfg.input}: {exc}") from exc
 
+    if cfg.workdir.exists() and not cfg.workdir.is_dir():
+        raise ConfigError(f"workdir must be a directory: {cfg.workdir}")
+
     if cfg.chunk_size <= 0:
         raise ConfigError("chunk_size must be greater than 0.")
     if cfg.parallel_workers < 1:

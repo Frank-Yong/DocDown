@@ -145,3 +145,11 @@ def test_input_must_be_a_file_when_provided(tmp_path):
 
     with pytest.raises(ConfigError, match="input must be a file"):
         load_config(cli_overrides={"input": str(input_dir)})
+
+
+def test_workdir_must_be_a_directory_when_existing_path_is_file(tmp_path):
+    workdir_file = tmp_path / "not-a-directory"
+    workdir_file.write_text("x", encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="workdir must be a directory"):
+        load_config(cli_overrides={"workdir": str(workdir_file)})

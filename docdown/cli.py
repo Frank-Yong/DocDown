@@ -8,7 +8,13 @@ from docdown.config import ConfigError, load_config
 @click.command()
 @click.argument("input_pdf", required=False, type=click.Path(exists=True, dir_okay=False, readable=True))
 @click.option("--config", "-c", type=click.Path(), default=None, help="Path to docdown.yaml")
-@click.option("--workdir", "-o", type=click.Path(), default=None, help="Working directory for artifacts")
+@click.option(
+    "--workdir",
+    "-o",
+    type=click.Path(file_okay=False, dir_okay=True),
+    default=None,
+    help="Working directory for artifacts",
+)
 @click.option("--chunk-size", type=int, default=None, help="Pages per chunk")
 @click.option("--parallel-workers", type=int, default=None, help="Max chunk workers")
 @click.option("--extractor", type=click.Choice(["grobid", "pdfminer"]), default=None, help="Primary extractor")
