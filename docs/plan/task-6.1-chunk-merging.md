@@ -12,7 +12,7 @@ Concatenate all chunk Markdown files into a single merged document in correct or
 
 - [ ] All chunk Markdown files in `workdir/markdown/` are concatenated in numeric order.
 - [ ] A horizontal rule (`---`) is inserted between chunks as a visual separator.
-- [ ] Failed/missing chunks are skipped with a placeholder comment: `<!-- chunk-NNN: extraction failed -->`.
+- [ ] Failed/missing chunks are represented in the merged output with a placeholder comment: `<!-- chunk-NNNN: extraction failed -->`.
 - [ ] Output is written to `workdir/merged.md`.
 - [ ] Total line count and file size of merged output are logged.
 - [ ] Unit tests verify: correct ordering, separator insertion, missing-chunk handling.
@@ -25,19 +25,20 @@ Concatenate all chunk Markdown files into a single merged document in correct or
 def merge_chunks(markdown_dir, output_path, total_chunks):
     parts = []
     for i in range(1, total_chunks + 1):
-        chunk_path = markdown_dir / f"chunk-{i:03d}.md"
+        chunk_path = markdown_dir / f"chunk-{i:04d}.md"
         if chunk_path.exists() and chunk_path.stat().st_size > 0:
             parts.append(chunk_path.read_text(encoding="utf-8"))
         else:
-            parts.append(f"<!-- chunk-{i:03d}: extraction failed -->\n")
+            parts.append(f"<!-- chunk-{i:04d}: extraction failed -->\n")
     
     merged = "\n\n---\n\n".join(parts)
-    output_path.write_text(merged, encoding="utf-8")
+    with output_path.open("w", encoding="utf-8", newline="") as f:
+        f.write(merged)
 ```
 
 ### Ordering
 
-Rely on the `chunk-NNN` naming convention. Sort numerically, not lexicographically (avoids `chunk-10` before `chunk-2` issues).
+Rely on the fixed-width `chunk-NNNN` naming convention. With zero-padded chunk numbers, lexicographic ordering is stable, but the implementation should still iterate by chunk number so missing chunks can be represented with placeholder comments.
 
 ## References
 

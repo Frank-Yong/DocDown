@@ -51,14 +51,14 @@ def extract_chunk(chunk_path, chunk_num, config, workdir):
         path = run_extractor(config.extractor, chunk_path, chunk_num, workdir)
         return ExtractionResult(chunk_num, True, config.extractor, path, None)
     except ExtractionError as e:
-        log.warning(f"[chunk-{chunk_num:03d}] Primary extractor failed: {e}")
+        log.warning(f"[chunk-{chunk_num:04d}] Primary extractor failed: {e}")
     
     # 2. Try fallback
     try:
         path = run_extractor(config.fallback_extractor, chunk_path, chunk_num, workdir)
         return ExtractionResult(chunk_num, True, config.fallback_extractor, path, None)
     except ExtractionError as e:
-        log.error(f"[chunk-{chunk_num:03d}] Fallback extractor failed: {e}")
+        log.error(f"[chunk-{chunk_num:04d}] Fallback extractor failed: {e}")
         return ExtractionResult(chunk_num, False, None, None, str(e))
 ```
 

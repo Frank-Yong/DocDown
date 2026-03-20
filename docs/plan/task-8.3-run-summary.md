@@ -27,7 +27,7 @@ DocDown Run Summary
 Input:          source.pdf (342 MB, 1847 pages)
 Chunks:         37
 Successful:     36
-Failed:         1 (chunk-023: GROBID timeout + pdfminer encoding error)
+Failed:         1 (chunk-0023: GROBID timeout + pdfminer encoding error)
 Tables found:   14
 Output:         final.md (4.2 MB)
 Duration:       12m 34s
@@ -41,7 +41,7 @@ def generate_summary(run_context):
     failed_details = ""
     if run_context.failed_chunks:
         details = "; ".join(
-            f"chunk-{r.chunk_number:03d}: {r.error}"
+            f"chunk-{r.chunk_number:04d}: {r.error}"
             for r in run_context.failed_chunks
         )
         failed_details = f" ({details})"

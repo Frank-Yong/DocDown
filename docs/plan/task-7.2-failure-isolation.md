@@ -45,7 +45,7 @@ def log_failure_summary(results):
     
     log.warning(f"{len(failed)} chunk(s) failed:")
     for r in failed:
-        log.warning(f"  chunk-{r.chunk_number:03d}: {r.failed_stage} — {r.error}")
+        log.warning(f"  chunk-{r.chunk_number:04d}: {r.failed_stage} — {r.error}")
     
     if len(failed) == len(results):
         raise FatalPipelineError("All chunks failed. No output produced.")

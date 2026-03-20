@@ -41,13 +41,13 @@ class WorkDir:
         self.base = base
     
     def chunk_pdf(self, n: int) -> Path:
-        return self.base / "chunks" / f"chunk-{n:03d}.pdf"
+        return self.base / "chunks" / f"chunk-{n:04d}.pdf"
     
     def extracted(self, n: int, ext: str = "xml") -> Path:
-        return self.base / "extracted" / f"chunk-{n:03d}.{ext}"
+        return self.base / "extracted" / f"chunk-{n:04d}.{ext}"
     
     def markdown(self, n: int) -> Path:
-        return self.base / "markdown" / f"chunk-{n:03d}.md"
+        return self.base / "markdown" / f"chunk-{n:04d}.md"
     
     # etc.
 ```

@@ -58,12 +58,12 @@ Split the input PDF into manageable chunks to prevent converter crashes and memo
 | -------------- | ---------------------------- |
 | Tool           | `qpdf` (preferred), `pdftk`  |
 | Chunk size     | ~50 pages                    |
-| Output         | `chunk-NNN.pdf`              |
+| Output         | `chunk-NNNN.pdf`             |
 
 Example:
 
 ```bash
-qpdf input.pdf --split-pages=50 chunk-%03d.pdf
+qpdf input.pdf --split-pages=50 chunk-%04d.pdf
 ```
 
 ### 5.2 Stage 2 — Extract Structured Content
@@ -74,13 +74,13 @@ Extract document structure from each chunk into a structured intermediate format
 
 | Property     | Value                                              |
 | ------------ | -------------------------------------------------- |
-| Tool         | GROBID (Docker: `lfoppiano/grobid:latest`)         |
+| Tool         | GROBID (Docker: `lfoppiano/grobid:0.8.1`)          |
 | Input        | Chunk PDFs                                         |
 | Output       | TEI XML per chunk                                  |
 | Capabilities | Sections, headings, references, semantic structure |
 
 ```bash
-docker run -p 8070:8070 lfoppiano/grobid:latest
+docker run -p 8070:8070 lfoppiano/grobid:0.8.1
 ```
 
 **Fallback method — pdfminer.six:**
@@ -130,8 +130,12 @@ Table output is merged into the corresponding Markdown chunk.
 
 Concatenate all chunk Markdown files and generate a Table of Contents from headings.
 
+```python
+# Pseudocode — implemented in Python (see §4.3 Cross-Platform Considerations), not via shell cat
+merge_chunks(markdown_dir=Path("markdown"), output_path=Path("merged.md"), total_chunks=n)
+```
+
 ```bash
-cat chunk-*.md > merged.md
 pandoc merged.md --toc -o final.md
 ```
 
@@ -197,7 +201,7 @@ Printed TOC text survives extraction but loses meaning:
 | Tool/Library   | Purpose                     | Install                                |
 | -------------- | --------------------------- | -------------------------------------- |
 | qpdf           | PDF splitting               | Package manager / CLI                  |
-| GROBID         | Structured extraction       | Docker (`lfoppiano/grobid:latest`)     |
+| GROBID         | Structured extraction       | Docker (`lfoppiano/grobid:0.8.1`)      |
 | pdfminer.six   | Fallback text extraction    | `pip install pdfminer.six`             |
 | Pandoc         | Format conversion           | Package manager / CLI                  |
 | Camelot        | Table extraction            | `pip install camelot-py[cv]`           |
