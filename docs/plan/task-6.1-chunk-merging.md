@@ -32,7 +32,8 @@ def merge_chunks(markdown_dir, output_path, total_chunks):
             parts.append(f"<!-- chunk-{i:04d}: extraction failed -->\n")
     
     merged = "\n\n---\n\n".join(parts)
-    output_path.write_text(merged, encoding="utf-8")
+    with output_path.open("w", encoding="utf-8", newline="") as f:
+        f.write(merged)
 ```
 
 ### Ordering
