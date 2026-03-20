@@ -122,3 +122,11 @@ def test_string_boolean_values_are_rejected(tmp_path):
 
     with pytest.raises(ConfigError, match="table_extraction must be a boolean"):
         load_config(cfg_path)
+
+
+def test_config_path_must_be_a_file(tmp_path):
+    config_dir = tmp_path / "config-dir"
+    config_dir.mkdir()
+
+    with pytest.raises(ConfigError, match="Config path is not a file"):
+        load_config(config_dir)

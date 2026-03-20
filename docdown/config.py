@@ -78,9 +78,16 @@ def _default_data() -> dict[str, Any]:
 def _read_yaml_config(config_path: Path) -> dict[str, Any]:
     if not config_path.exists():
         raise ConfigError(f"Config file not found: {config_path}")
+    if not config_path.is_file():
+        raise ConfigError(f"Config path is not a file: {config_path}")
 
     try:
-        raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+        raw_text = config_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ConfigError(f"Could not read config file {config_path}: {exc}") from exc
+
+    try:
+        raw = yaml.safe_load(raw_text)
     except yaml.YAMLError as exc:
         raise ConfigError(f"Invalid YAML in config file {config_path}: {exc}") from exc
 
