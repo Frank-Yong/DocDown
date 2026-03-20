@@ -17,3 +17,4 @@ def main(input_pdf, config, workdir):
 def _version():
     from docdown import __version__
     return __version__
+
