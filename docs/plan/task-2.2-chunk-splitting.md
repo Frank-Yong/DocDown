@@ -12,7 +12,7 @@ Split the validated PDF into page-range chunks using `qpdf`.
 
 - [ ] PDF is split into chunks of `chunk_size` pages (configurable, default 50).
 - [ ] Last chunk contains the remaining pages (may be smaller than `chunk_size`).
-- [ ] Output files follow naming convention: `chunk-001.pdf`, `chunk-002.pdf`, etc.
+- [ ] Output files follow naming convention: `chunk-0001.pdf`, `chunk-0002.pdf`, etc.
 - [ ] Output files are written to `workdir/chunks/`.
 - [ ] Chunk count is verified: `ceil(total_pages / chunk_size)` chunks exist.
 - [ ] Each chunk is validated as a readable PDF.
@@ -31,7 +31,7 @@ def split_pdf(input_path, chunks_dir, chunk_size, total_pages):
     for i in range(num_chunks):
         start = i * chunk_size + 1
         end = min((i + 1) * chunk_size, total_pages)
-        output = chunks_dir / f"chunk-{i+1:03d}.pdf"
+        output = chunks_dir / f"chunk-{i+1:04d}.pdf"
         subprocess.run([
             "qpdf", str(input_path),
             "--pages", ".", f"{start}-{end}", "--",
@@ -44,7 +44,7 @@ def split_pdf(input_path, chunks_dir, chunk_size, total_pages):
 
 - Single-page PDF → one chunk.
 - PDF with exactly `chunk_size` pages → one chunk.
-- Very large page counts (10,000+) → works; naming supports up to 999 chunks with 3-digit padding. Extend to 4-digit if needed.
+- Very large page counts (10,000+) → works; 4-digit padding supports up to 9,999 chunks.
 
 ## References
 

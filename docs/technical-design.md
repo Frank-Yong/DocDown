@@ -29,19 +29,19 @@ workdir/
 ├── input/
 │   └── source.pdf                  # original (or symlink)
 ├── chunks/
-│   ├── chunk-001.pdf
-│   ├── chunk-002.pdf
+│   ├── chunk-0001.pdf
+│   ├── chunk-0002.pdf
 │   └── ...
 ├── extracted/
-│   ├── chunk-001.xml               # TEI XML from GROBID
-│   ├── chunk-002.xml
+│   ├── chunk-0001.xml              # TEI XML from GROBID
+│   ├── chunk-0002.xml
 │   └── ...
 ├── markdown/
-│   ├── chunk-001.md
-│   ├── chunk-002.md
+│   ├── chunk-0001.md
+│   ├── chunk-0002.md
 │   └── ...
 ├── tables/
-│   ├── chunk-003-table-001.md      # extracted tables
+│   ├── chunk-0003-table-001.md     # extracted tables
 │   └── ...
 ├── merged.md                       # concatenated output (no TOC)
 ├── final.md                        # merged output with generated TOC
@@ -84,8 +84,8 @@ validation:
 3. Calculate chunk boundaries based on `chunk_size`.
 4. Split:
    ```bash
-   qpdf input.pdf --pages . 1-50 -- chunks/chunk-001.pdf
-   qpdf input.pdf --pages . 51-100 -- chunks/chunk-002.pdf
+   qpdf input.pdf --pages . 1-50 -- chunks/chunk-0001.pdf
+   qpdf input.pdf --pages . 51-100 -- chunks/chunk-0002.pdf
    # ...
    ```
 5. Verify chunk count × chunk_size ≥ total pages.
@@ -96,7 +96,7 @@ validation:
 - Encrypted PDFs: `qpdf --decrypt` first if a password is available; otherwise abort with a clear error.
 - Corrupted PDFs: `qpdf --check` returns a non-zero exit code → abort and report.
 
-**Outputs:** `chunks/chunk-NNN.pdf`
+**Outputs:** `chunks/chunk-NNNN.pdf`
 
 ---
 
@@ -122,7 +122,7 @@ Use a pinned version tag in production rather than `latest`.
 POST http://localhost:8070/api/processFulltextDocument
 Content-Type: multipart/form-data
 
-input = @chunks/chunk-001.pdf
+input = @chunks/chunk-0001.pdf
 ```
 
 **Response:** TEI XML document.
@@ -132,7 +132,7 @@ input = @chunks/chunk-001.pdf
 - Wait for GROBID readiness before submitting (`GET /api/isalive`).
 - Set a per-request timeout of 120 seconds. Large or complex chunks may take longer; retry once with a 240-second timeout before falling back.
 - GROBID returns HTTP 503 when overloaded. Implement exponential backoff (max 3 retries, base delay 5 s).
-- Store response as `extracted/chunk-NNN.xml`.
+- Store response as `extracted/chunk-NNNN.xml`.
 
 #### 5.2.2 pdfminer.six Extraction (Fallback)
 
@@ -141,8 +141,8 @@ Used when GROBID is unavailable or fails on a specific chunk.
 ```python
 from pdfminer.high_level import extract_text
 
-text = extract_text("chunks/chunk-001.pdf")
-with open("extracted/chunk-001.txt", "w", encoding="utf-8") as f:
+text = extract_text("chunks/chunk-0001.pdf")
+with open("extracted/chunk-0001.txt", "w", encoding="utf-8") as f:
     f.write(text)
 ```
 
@@ -172,13 +172,13 @@ Failed chunks are listed in `run.log` and summarised at the end of the run.
 From TEI XML (GROBID output):
 
 ```bash
-pandoc extracted/chunk-001.xml -f tei -t gfm --wrap=none -o markdown/chunk-001.md
+pandoc extracted/chunk-0001.xml -f tei -t gfm --wrap=none -o markdown/chunk-0001.md
 ```
 
 From plain text (pdfminer fallback):
 
 ```bash
-pandoc extracted/chunk-001.txt -f plain -t gfm --wrap=none -o markdown/chunk-001.md
+pandoc extracted/chunk-0001.txt -f plain -t gfm --wrap=none -o markdown/chunk-0001.md
 ```
 
 **Pandoc flags:**
@@ -209,9 +209,9 @@ For each chunk PDF, attempt table extraction:
 ```python
 import camelot
 
-tables = camelot.read_pdf("chunks/chunk-003.pdf", pages="all", flavor="lattice")
+tables = camelot.read_pdf("chunks/chunk-0003.pdf", pages="all", flavor="lattice")
 if not tables:
-    tables = camelot.read_pdf("chunks/chunk-003.pdf", pages="all", flavor="stream")
+    tables = camelot.read_pdf("chunks/chunk-0003.pdf", pages="all", flavor="stream")
 ```
 
 - Try `lattice` first (for tables with visible cell borders).
@@ -225,7 +225,7 @@ Each extracted table is converted to a Markdown table:
 for i, table in enumerate(tables):
     df = table.df
     md = df.to_markdown(index=False)
-    with open(f"tables/chunk-003-table-{i+1:03d}.md", "w") as f:
+    with open(f"tables/chunk-0003-table-{i+1:03d}.md", "w") as f:
         f.write(md)
 ```
 
@@ -250,9 +250,13 @@ This step may require manual review for complex layouts.
 
 #### 5.5.1 Merge
 
-```bash
-# Ensure correct ordering
-ls markdown/chunk-*.md | sort | xargs cat > merged.md
+Concatenation is implemented in Python (per §11.3 rule 3), not via shell `cat`:
+
+```python
+# Pseudocode — see implementation for full version
+for md_path in sorted(markdown_dir.glob("chunk-*.md")):
+    out.write(md_path.read_text(encoding="utf-8"))
+    out.write("\n\n---\n\n")
 ```
 
 Insert a horizontal rule (`---`) between chunks to preserve visual separation.
@@ -294,7 +298,7 @@ chunk PDF → PyMuPDF (text per page) → LLM cleanup → chunk .md → Merge
 ```python
 import fitz  # PyMuPDF
 
-doc = fitz.open("chunks/chunk-001.pdf")
+doc = fitz.open("chunks/chunk-0001.pdf")
 pages = []
 for page in doc:
     pages.append(page.get_text("text"))
@@ -387,7 +391,7 @@ DocDown Run Summary
 Input:          source.pdf (342 MB, 1847 pages)
 Chunks:         37
 Successful:     36
-Failed:         1 (chunk-023: GROBID timeout + pdfminer encoding error)
+Failed:         1 (chunk-0023: GROBID timeout + pdfminer encoding error)
 Tables found:   14
 Output:         final.md (4.2 MB)
 Duration:       12m 34s
@@ -456,7 +460,7 @@ Python 3.10+ (for `match` statements, `|` union types in type hints, and `pathli
 
 1. **Paths:** Use `pathlib.Path` everywhere. Never concatenate paths with string `/` or `\`.
 2. **Subprocess calls:** Invoke all external tools (`qpdf`, `pandoc`, `pdftk`) via `subprocess.run()` with list arguments (not shell strings). This avoids shell-escaping issues across platforms.
-3. **File merging:** Implement chunk concatenation in Python (`open` / `write`), not via shell `cat`. The bash examples in this document are for illustration only.
+3. **File merging:** Implement chunk concatenation in Python (`open` / `write`), not via shell `cat`.
 4. **Line endings:** Write all output files with `\n` (Unix-style). Use `newline=""` or explicit encoding when writing.
 5. **Docker:** GROBID is accessed over HTTP (`localhost:8070`). Docker availability is checked at startup; if unavailable, the pipeline falls back to pdfminer for all chunks.
 6. **Temp files:** Use `tempfile` module or the working directory — never hardcode `/tmp`.

@@ -12,7 +12,7 @@ Concatenate all chunk Markdown files into a single merged document in correct or
 
 - [ ] All chunk Markdown files in `workdir/markdown/` are concatenated in numeric order.
 - [ ] A horizontal rule (`---`) is inserted between chunks as a visual separator.
-- [ ] Failed/missing chunks are skipped with a placeholder comment: `<!-- chunk-NNN: extraction failed -->`.
+- [ ] Failed/missing chunks are skipped with a placeholder comment: `<!-- chunk-NNNN: extraction failed -->`.
 - [ ] Output is written to `workdir/merged.md`.
 - [ ] Total line count and file size of merged output are logged.
 - [ ] Unit tests verify: correct ordering, separator insertion, missing-chunk handling.
@@ -37,7 +37,7 @@ def merge_chunks(markdown_dir, output_path, total_chunks):
 
 ### Ordering
 
-Rely on the `chunk-NNN` naming convention. Sort numerically, not lexicographically (avoids `chunk-10` before `chunk-2` issues).
+Rely on the `chunk-NNNN` naming convention. Sort numerically, not lexicographically (avoids `chunk-10` before `chunk-2` issues).
 
 ## References
 

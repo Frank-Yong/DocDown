@@ -22,8 +22,8 @@ Set up structured logging with configurable levels, file output, and per-chunk c
 ### Format
 
 ```
-2026-03-19T10:15:32 INFO  [chunk-007] GROBID extraction complete (12.3s)
-2026-03-19T10:15:33 WARN  [chunk-007] Output size below threshold (0.8%)
+2026-03-19T10:15:32 INFO  [chunk-0007] GROBID extraction complete (12.3s)
+2026-03-19T10:15:33 WARN  [chunk-0007] Output size below threshold (0.8%)
 ```
 
 ### Design

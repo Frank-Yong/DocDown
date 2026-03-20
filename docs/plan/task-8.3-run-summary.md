@@ -27,7 +27,7 @@ DocDown Run Summary
 Input:          source.pdf (342 MB, 1847 pages)
 Chunks:         37
 Successful:     36
-Failed:         1 (chunk-023: GROBID timeout + pdfminer encoding error)
+Failed:         1 (chunk-0023: GROBID timeout + pdfminer encoding error)
 Tables found:   14
 Output:         final.md (4.2 MB)
 Duration:       12m 34s

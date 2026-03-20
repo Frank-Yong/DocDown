@@ -12,7 +12,7 @@ Implement the fallback content extraction method using `pdfminer.six` for chunks
 ## Acceptance Criteria
 
 - [ ] Text is extracted from a chunk PDF using `pdfminer.six` `extract_text`.
-- [ ] Output is written to `workdir/extracted/chunk-NNN.txt` (note: `.txt`, not `.xml`).
+- [ ] Output is written to `workdir/extracted/chunk-NNNN.txt` (note: `.txt`, not `.xml`).
 - [ ] Output encoding is UTF-8.
 - [ ] Extraction that produces empty output is flagged as a failure.
 - [ ] Extraction errors (e.g., codec errors) are caught, logged, and reported as failure.
