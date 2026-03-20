@@ -105,10 +105,13 @@ Add:
 
 ```python
 # Pseudocode
-parts = [
-  md_path.read_text(encoding="utf-8")
-  for md_path in sorted(markdown_dir.glob("chunk-*.md"))
-]
+parts = []
+for i in range(1, total_chunks + 1):
+  chunk_path = markdown_dir / f"chunk-{i:04d}.md"
+  if chunk_path.exists() and chunk_path.stat().st_size > 0:
+    parts.append(chunk_path.read_text(encoding="utf-8"))
+  else:
+    parts.append(f"<!-- chunk-{i:04d}: extraction failed -->\n")
 
 with output_path.open("w", encoding="utf-8", newline="") as out:
   out.write("\n\n---\n\n".join(parts))
