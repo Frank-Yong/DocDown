@@ -2,7 +2,7 @@
 
 ## Motivation
 
-The original plan has 25 tasks across 9 stages, ordered strictly stage-by-stage. This alternative groups them into three delivery phases. Each phase produces a working pipeline that can be tested with real PDFs. All original tasks are preserved and fully implemented — nothing is cut, only reordered.
+The original plan has 25 tasks across 9 stages, ordered strictly stage-by-stage. This alternative groups them into three delivery phases. Each phase produces a working pipeline that can be tested with real PDFs. All original tasks remain in scope — nothing is cut, only reordered.
 
 The key changes from the original ordering:
 

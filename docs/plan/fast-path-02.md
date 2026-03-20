@@ -4,7 +4,7 @@
 
 This alternative optimizes for the shortest route to a testable end-to-end pipeline. It reaches first output sooner than Fast-Path 01 by using the simpler pdfminer-based extraction path before introducing GROBID and extraction orchestration.
 
-All original tasks are still preserved and fully implemented. Nothing is removed. The difference is only delivery order.
+All original tasks remain in scope. Nothing is removed. The difference is only delivery order.
 
 The key changes from the original ordering:
 
