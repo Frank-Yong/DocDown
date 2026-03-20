@@ -144,8 +144,8 @@ def _build_and_validate(data: dict[str, Any]) -> Config:
 			extractor=str(data["extractor"]),
 			grobid_url=str(data["grobid_url"]),
 			fallback_extractor=str(data["fallback_extractor"]),
-			table_extraction=bool(data["table_extraction"]),
-			llm_cleanup=bool(data["llm_cleanup"]),
+			table_extraction=_require_bool(data["table_extraction"], "table_extraction"),
+			llm_cleanup=_require_bool(data["llm_cleanup"], "llm_cleanup"),
 			llm_model=str(data["llm_model"]) if data["llm_model"] is not None else None,
 			validation=validation_cfg,
 		)
@@ -169,4 +169,10 @@ def _validate_semantics(cfg: Config) -> None:
 		raise ConfigError("validation.min_output_ratio must be greater than 0.")
 	if cfg.validation.max_empty_chunks < 0:
 		raise ConfigError("validation.max_empty_chunks must be at least 0.")
+
+
+def _require_bool(value: Any, key: str) -> bool:
+	if isinstance(value, bool):
+		return value
+	raise ConfigError(f"{key} must be a boolean (true/false).")
 
