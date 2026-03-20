@@ -1,6 +1,7 @@
 """Tests for the CLI entry point."""
 
 from click.testing import CliRunner
+from docdown import __version__
 from docdown.cli import main
 
 
@@ -11,4 +12,4 @@ def test_cli_shows_version(tmp_path):
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
     assert result.exit_code == 0
-    assert "DocDown v0.1.0" in result.output
+    assert f"DocDown v{__version__}" in result.output
