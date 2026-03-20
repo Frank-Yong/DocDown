@@ -32,7 +32,7 @@ def table_to_markdown(table, chunk_num, table_num, tables_dir):
     
     md = df.to_markdown(index=False)
     
-    path = tables_dir / f"chunk-{chunk_num:03d}-table-{table_num:03d}.md"
+    path = tables_dir / f"chunk-{chunk_num:04d}-table-{table_num:03d}.md"
     metadata = (
         f"<!-- table: chunk={chunk_num} table={table_num} "
         f"page={table.parsing_report['page']} "

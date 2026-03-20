@@ -22,7 +22,7 @@ Use:
 Example:
 
 ```bash
-qpdf input.pdf --split-pages=50 chunk-%03d.pdf
+qpdf input.pdf --split-pages=50 chunk-%04d.pdf
 ```
 
 👉 This creates manageable ~50-page chunks.
@@ -46,7 +46,7 @@ GROBID
 Run via Docker:
 
 ```bash
-docker run -p 8070:8070 lfoppiano/grobid:latest
+docker run -p 8070:8070 lfoppiano/grobid:0.8.1
 ```
 
 Then process each chunk.
@@ -103,8 +103,9 @@ Add:
 
 ## 5) Merge everything back
 
-```bash
-cat chunk-*.md > final.md
+```python
+for md_path in sorted(markdown_dir.glob("chunk-*.md")):
+  out.write(md_path.read_text(encoding="utf-8"))
 ```
 
 ---
@@ -209,8 +210,8 @@ There are two very different things people call “index”:
 
 If you split:
 
-* chunk-001 → pages 1–50
-* chunk-002 → pages 51–100
+* chunk-0001 → pages 1–50
+* chunk-0002 → pages 51–100
 
 Then your index still says:
 

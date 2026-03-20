@@ -43,7 +43,7 @@ def process_chunks_parallel(chunk_paths, config, workdir):
                 result = future.result()
                 results.append(result)
             except Exception as e:
-                log.error(f"[chunk-{chunk_num:03d}] Unhandled error: {e}")
+                log.error(f"[chunk-{chunk_num:04d}] Unhandled error: {e}")
                 results.append(ChunkResult(chunk_num, success=False, error=str(e)))
     return sorted(results, key=lambda r: r.chunk_number)
 ```

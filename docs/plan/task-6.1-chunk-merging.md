@@ -25,11 +25,11 @@ Concatenate all chunk Markdown files into a single merged document in correct or
 def merge_chunks(markdown_dir, output_path, total_chunks):
     parts = []
     for i in range(1, total_chunks + 1):
-        chunk_path = markdown_dir / f"chunk-{i:03d}.md"
+        chunk_path = markdown_dir / f"chunk-{i:04d}.md"
         if chunk_path.exists() and chunk_path.stat().st_size > 0:
             parts.append(chunk_path.read_text(encoding="utf-8"))
         else:
-            parts.append(f"<!-- chunk-{i:03d}: extraction failed -->\n")
+            parts.append(f"<!-- chunk-{i:04d}: extraction failed -->\n")
     
     merged = "\n\n---\n\n".join(parts)
     output_path.write_text(merged, encoding="utf-8")

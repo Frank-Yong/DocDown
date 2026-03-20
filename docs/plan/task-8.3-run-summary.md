@@ -41,7 +41,7 @@ def generate_summary(run_context):
     failed_details = ""
     if run_context.failed_chunks:
         details = "; ".join(
-            f"chunk-{r.chunk_number:03d}: {r.error}"
+            f"chunk-{r.chunk_number:04d}: {r.error}"
             for r in run_context.failed_chunks
         )
         failed_details = f" ({details})"

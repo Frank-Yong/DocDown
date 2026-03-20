@@ -1,4 +1,4 @@
-# DocDown — Fast-Path Implementation Plan
+# DocDown — Fast-Path 01 (Quality-First MVP)
 
 ## Motivation
 
@@ -132,7 +132,7 @@ Task 7.2 (failure isolation) is deferred to Phase 2 with the worker pool, but Ph
 
 ### Integration note — worker pool retrofit
 
-Task 7.1 wraps the existing sequential `extract → convert → cleanup → tables` per-chunk pipeline from Phase 1 in a `ThreadPoolExecutor`. The per-chunk function (`process_single_chunk`) is already clean from Phase 1; the worker pool is purely additive. No Phase 1 code needs restructuring — only a new outer loop is needed.
+Task 7.1 parallelises the per-chunk pipeline assembled by the end of Phase 2: `extract → convert → cleanup → tables`. Phase 1 already establishes the sequential `process_single_chunk` shape without table extraction, and Phase 2 extends that function with tasks 5.1–5.3 before wrapping it in a `ThreadPoolExecutor`. No earlier task needs to be redefined; the worker pool is an additive outer loop.
 
 ---
 
@@ -160,7 +160,7 @@ Task 7.1 wraps the existing sequential `extract → convert → cleanup → tabl
 
 ## Summary comparison
 
-| | Original plan | Fast path |
+| | Original plan | Fast path 01 |
 |---|---|---|
 | Total tasks | 25 | 25 (same) |
 | Tasks modified | — | 0 |

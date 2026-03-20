@@ -120,6 +120,11 @@ Stage 1 (Setup)
   └──▶ Stage 9 (LLM — optional, independent path)
 ```
 
+## Alternative Delivery Paths
+
+- [fast-path-01.md](fast-path-01.md): quality-first MVP path that reaches a full GROBID plus pdfminer end-to-end pipeline before tables, parallelism, and the LLM option.
+- [fast-path-02.md](fast-path-02.md): fallback-first baseline path that gets to a simpler pdfminer-only end-to-end pipeline even sooner, then layers GROBID, tables, and parallelism afterward.
+
 ## Conventions
 
 - Each task file follows a consistent template: summary, dependencies, acceptance criteria, implementation notes, and references.
