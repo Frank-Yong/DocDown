@@ -1,1 +1,1 @@
-"""Top-level pipeline orchestration."""
+"""Top-level pipeline orchestration (placeholder)."""
