@@ -4,7 +4,7 @@ import click
 
 
 @click.command()
-@click.argument("input_pdf", type=click.Path(exists=True))
+@click.argument("input_pdf", type=click.Path(exists=True, dir_okay=False, readable=True))
 @click.option("--config", "-c", type=click.Path(), default=None, help="Path to docdown.yaml")
 @click.option("--workdir", "-o", type=click.Path(), default="./output", help="Working directory for artifacts")
 def main(input_pdf, config, workdir):
