@@ -41,6 +41,9 @@ class Config:
     validation: ValidationConfig = field(default_factory=ValidationConfig)
 
 
+DEFAULT_CONFIG = Config()
+
+
 def load_config(config_path: str | Path | None = None, cli_overrides: dict[str, Any] | None = None) -> Config:
     """Load config using precedence: defaults -> YAML -> CLI overrides."""
 
@@ -57,20 +60,21 @@ def load_config(config_path: str | Path | None = None, cli_overrides: dict[str, 
 
 
 def _default_data() -> dict[str, Any]:
+    defaults = DEFAULT_CONFIG
     return {
-        "input": None,
-        "workdir": "./output",
-        "chunk_size": 50,
-        "parallel_workers": 4,
-        "extractor": "grobid",
-        "grobid_url": "http://localhost:8070",
-        "fallback_extractor": "pdfminer",
-        "table_extraction": True,
-        "llm_cleanup": False,
-        "llm_model": None,
+        "input": defaults.input,
+        "workdir": str(defaults.workdir),
+        "chunk_size": defaults.chunk_size,
+        "parallel_workers": defaults.parallel_workers,
+        "extractor": defaults.extractor,
+        "grobid_url": defaults.grobid_url,
+        "fallback_extractor": defaults.fallback_extractor,
+        "table_extraction": defaults.table_extraction,
+        "llm_cleanup": defaults.llm_cleanup,
+        "llm_model": defaults.llm_model,
         "validation": {
-            "min_output_ratio": 0.01,
-            "max_empty_chunks": 0,
+            "min_output_ratio": defaults.validation.min_output_ratio,
+            "max_empty_chunks": defaults.validation.max_empty_chunks,
         },
     }
 
