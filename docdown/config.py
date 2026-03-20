@@ -139,15 +139,15 @@ def _apply_cli_overrides(base: dict[str, Any], overrides: dict[str, Any]) -> Non
 def _build_and_validate(data: dict[str, Any]) -> Config:
     try:
         validation_cfg = ValidationConfig(
-            min_output_ratio=float(data["validation"]["min_output_ratio"]),
-            max_empty_chunks=int(data["validation"]["max_empty_chunks"]),
+            min_output_ratio=_require_float(data["validation"]["min_output_ratio"], "validation.min_output_ratio"),
+            max_empty_chunks=_require_int(data["validation"]["max_empty_chunks"], "validation.max_empty_chunks"),
         )
 
         cfg = Config(
             input=Path(data["input"]) if data["input"] is not None else None,
             workdir=Path(data["workdir"]),
-            chunk_size=int(data["chunk_size"]),
-            parallel_workers=int(data["parallel_workers"]),
+            chunk_size=_require_int(data["chunk_size"], "chunk_size"),
+            parallel_workers=_require_int(data["parallel_workers"], "parallel_workers"),
             extractor=str(data["extractor"]),
             grobid_url=str(data["grobid_url"]),
             fallback_extractor=str(data["fallback_extractor"]),
@@ -156,6 +156,8 @@ def _build_and_validate(data: dict[str, Any]) -> Config:
             llm_model=str(data["llm_model"]) if data["llm_model"] is not None else None,
             validation=validation_cfg,
         )
+    except ConfigError:
+        raise
     except (TypeError, ValueError) as exc:
         raise ConfigError(f"Invalid configuration value type: {exc}") from exc
 
@@ -196,4 +198,16 @@ def _require_bool(value: Any, key: str) -> bool:
     if isinstance(value, bool):
         return value
     raise ConfigError(f"{key} must be a boolean (true/false).")
+
+
+def _require_int(value: Any, key: str) -> int:
+    if isinstance(value, bool):
+        raise ConfigError(f"{key} must be an integer, not a boolean.")
+    return int(value)
+
+
+def _require_float(value: Any, key: str) -> float:
+    if isinstance(value, bool):
+        raise ConfigError(f"{key} must be a number, not a boolean.")
+    return float(value)
 

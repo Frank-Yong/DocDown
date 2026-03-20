@@ -153,3 +153,34 @@ def test_workdir_must_be_a_directory_when_existing_path_is_file(tmp_path):
 
     with pytest.raises(ConfigError, match="workdir must be a directory"):
         load_config(cli_overrides={"workdir": str(workdir_file)})
+
+
+def test_chunk_size_boolean_is_rejected(tmp_path):
+    cfg_path = tmp_path / "docdown.yaml"
+    cfg_path.write_text(
+        "\n".join(
+            [
+                "chunk_size: true",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="chunk_size must be an integer, not a boolean"):
+        load_config(cfg_path)
+
+
+def test_min_output_ratio_boolean_is_rejected(tmp_path):
+    cfg_path = tmp_path / "docdown.yaml"
+    cfg_path.write_text(
+        "\n".join(
+            [
+                "validation:",
+                "  min_output_ratio: false",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="validation.min_output_ratio must be a number, not a boolean"):
+        load_config(cfg_path)
