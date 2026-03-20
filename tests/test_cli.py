@@ -26,4 +26,5 @@ def test_cli_rejects_file_path_for_workdir(tmp_path):
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(workdir_file)])
 
     assert result.exit_code != 0
-    assert "Directory" in result.output
+    assert "--workdir" in result.output
+    assert "Invalid value" in result.output
