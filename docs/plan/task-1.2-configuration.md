@@ -10,13 +10,13 @@ Implement configuration loading from a YAML file and CLI flags, with sensible de
 
 ## Acceptance Criteria
 
-- [ ] `docdown.yaml` schema is defined and documented.
-- [ ] Configuration loads from file path specified via `--config` CLI flag.
-- [ ] CLI flags override config file values.
-- [ ] All parameters have defaults (pipeline runs without a config file).
-- [ ] Invalid configuration produces a clear error message and exits.
-- [ ] Configuration object is immutable after loading.
-- [ ] Unit tests cover: defaults, file loading, CLI overrides, validation errors.
+- [x] `docdown.yaml` schema is defined and documented.
+- [x] Configuration loads from file path specified via `--config` CLI flag.
+- [x] CLI flags override config file values.
+- [x] All parameters have defaults (pipeline runs without a config file).
+- [x] Invalid configuration produces a clear error message and exits.
+- [x] Configuration object is immutable after loading.
+- [x] Unit tests cover: defaults, file loading, CLI overrides, validation errors.
 
 ## Implementation Notes
 
