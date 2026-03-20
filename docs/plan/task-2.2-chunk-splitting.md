@@ -44,7 +44,7 @@ def split_pdf(input_path, chunks_dir, chunk_size, total_pages):
 
 - Single-page PDF → one chunk.
 - PDF with exactly `chunk_size` pages → one chunk.
-- Very large page counts (10,000+) → works; 4-digit padding supports up to 9,999 chunks.
+- Very large page counts (10,000+) → works as long as the resulting chunk count stays within the fixed-width naming scheme. The current 4-digit convention supports up to 9,999 chunks; if `num_chunks` can exceed that, derive the padding width from `num_chunks` instead of assuming 4 digits.
 
 ## References
 
