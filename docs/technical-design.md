@@ -222,12 +222,14 @@ if not tables:
 Each extracted table is converted to a Markdown table:
 
 ```python
+from pathlib import Path
+
 for i, table in enumerate(tables):
     df = table.df
     md = df.to_markdown(index=False)
-  output_path = Path("tables") / f"chunk-0003-table-{i+1:03d}.md"
-  with output_path.open("w", encoding="utf-8", newline="") as f:
-    f.write(md)
+    output_path = Path("tables") / f"chunk-0003-table-{i+1:03d}.md"
+    with output_path.open("w", encoding="utf-8", newline="") as f:
+        f.write(md)
 ```
 
 Requires `tabulate` for `DataFrame.to_markdown()`.
