@@ -1,1 +1,1 @@
-"""Stage 3 — Markdown conversion via Pandoc."""
+"""Stage 3 — Markdown conversion (placeholder)."""
