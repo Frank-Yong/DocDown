@@ -164,6 +164,17 @@ def _build_and_validate(data: dict[str, Any]) -> Config:
 
 
 def _validate_semantics(cfg: Config) -> None:
+    if cfg.input is not None:
+        if not cfg.input.exists():
+            raise ConfigError(f"input file not found: {cfg.input}")
+        if not cfg.input.is_file():
+            raise ConfigError(f"input must be a file: {cfg.input}")
+        try:
+            with cfg.input.open("rb"):
+                pass
+        except OSError as exc:
+            raise ConfigError(f"input file is not readable: {cfg.input}: {exc}") from exc
+
     if cfg.chunk_size <= 0:
         raise ConfigError("chunk_size must be greater than 0.")
     if cfg.parallel_workers < 1:

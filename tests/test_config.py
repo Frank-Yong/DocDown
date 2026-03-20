@@ -130,3 +130,18 @@ def test_config_path_must_be_a_file(tmp_path):
 
     with pytest.raises(ConfigError, match="Config path is not a file"):
         load_config(config_dir)
+
+
+def test_input_file_must_exist_when_provided(tmp_path):
+    missing_pdf = tmp_path / "missing.pdf"
+
+    with pytest.raises(ConfigError, match="input file not found"):
+        load_config(cli_overrides={"input": str(missing_pdf)})
+
+
+def test_input_must_be_a_file_when_provided(tmp_path):
+    input_dir = tmp_path / "input-dir"
+    input_dir.mkdir()
+
+    with pytest.raises(ConfigError, match="input must be a file"):
+        load_config(cli_overrides={"input": str(input_dir)})
