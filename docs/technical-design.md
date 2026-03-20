@@ -258,7 +258,9 @@ parts = [
   md_path.read_text(encoding="utf-8")
   for md_path in sorted(markdown_dir.glob("chunk-*.md"))
 ]
-out.write("\n\n---\n\n".join(parts))
+
+with output_path.open("w", encoding="utf-8", newline="") as out:
+  out.write("\n\n---\n\n".join(parts))
 ```
 
 Insert a horizontal rule (`---`) between chunks to preserve visual separation.
