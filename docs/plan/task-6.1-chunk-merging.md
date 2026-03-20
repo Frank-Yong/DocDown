@@ -38,7 +38,7 @@ def merge_chunks(markdown_dir, output_path, total_chunks):
 
 ### Ordering
 
-Rely on the `chunk-NNNN` naming convention. Sort numerically, not lexicographically (avoids `chunk-10` before `chunk-2` issues).
+Rely on the fixed-width `chunk-NNNN` naming convention. With zero-padded chunk numbers, lexicographic ordering is stable, but the implementation should still iterate by chunk number so missing chunks can be represented with placeholder comments.
 
 ## References
 
