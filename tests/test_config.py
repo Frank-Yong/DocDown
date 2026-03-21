@@ -224,3 +224,19 @@ def test_min_output_ratio_nan_is_rejected():
 def test_min_output_ratio_infinity_is_rejected():
     with pytest.raises(ConfigError, match="validation.min_output_ratio must be a finite number"):
         load_config(cli_overrides={"validation": {"min_output_ratio": float("inf")}})
+
+
+def test_min_output_ratio_invalid_string_is_rejected(tmp_path):
+    cfg_path = tmp_path / "docdown.yaml"
+    cfg_path.write_text(
+        "\n".join(
+            [
+                "validation:",
+                "  min_output_ratio: not-a-number",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="validation.min_output_ratio must be a number"):
+        load_config(cfg_path)

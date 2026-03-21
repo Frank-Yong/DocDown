@@ -221,5 +221,8 @@ def _require_int(value: Any, key: str) -> int:
 def _require_float(value: Any, key: str) -> float:
     if isinstance(value, bool):
         raise ConfigError(f"{key} must be a number, not a boolean.")
-    return float(value)
+    try:
+        return float(value)
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(f"{key} must be a number.") from exc
 
