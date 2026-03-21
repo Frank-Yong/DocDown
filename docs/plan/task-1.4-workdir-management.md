@@ -10,12 +10,17 @@ Create and manage the working directory structure where all intermediate and out
 
 ## Acceptance Criteria
 
-- [ ] Working directory is created at the configured `workdir` path.
-- [ ] Subdirectories are created: `input/`, `chunks/`, `extracted/`, `markdown/`, `tables/`.
-- [ ] If `workdir` already exists, pipeline resumes without deleting previous files (allows reprocessing).
-- [ ] Input PDF is copied or symlinked into `input/`.
-- [ ] A helper function returns the path for any artifact given its type and chunk number.
-- [ ] Unit tests verify directory creation and path generation.
+- [x] Working directory is created at the configured `workdir` path.
+- [x] Subdirectories are created: `input/`, `chunks/`, `extracted/`, `markdown/`, `tables/`.
+- [x] If `workdir` already exists, pipeline resumes without deleting previous files (allows reprocessing).
+- [x] Input PDF is copied or symlinked into `input/`.
+- [x] A helper function returns the path for any artifact given its type and chunk number.
+- [x] Unit tests verify directory creation and path generation.
+
+Implemented in:
+- `docdown/workdir.py`
+- `docdown/cli.py`
+- `tests/test_workdir.py`
 
 ## Implementation Notes
 

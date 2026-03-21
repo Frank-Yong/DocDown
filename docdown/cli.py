@@ -4,6 +4,7 @@ import click
 
 from docdown.config import ConfigError, load_config
 from docdown.utils.logging import configure_logging
+from docdown.workdir import WorkDir, WorkDirError
 
 
 @click.command()
@@ -81,6 +82,13 @@ def main(
     if cfg.input is None:
         raise click.ClickException("No input PDF provided. Pass INPUT_PDF or set 'input' in docdown.yaml.")
 
+    try:
+        workdir = WorkDir(cfg.workdir)
+        workdir.ensure_structure()
+        staged_input = workdir.stage_input(cfg.input)
+    except WorkDirError as exc:
+        raise click.ClickException(str(exc)) from exc
+
     logger = configure_logging(cfg.workdir, cfg.log_level)
     version_text = f"DocDown v{_version()}"
     input_text = f"Input:   {cfg.input}"
@@ -94,6 +102,7 @@ def main(
     logger.info(version_text)
     logger.info(input_text)
     logger.info(workdir_text)
+    logger.debug("Staged input at %s", staged_input)
 
 
 def _version():
