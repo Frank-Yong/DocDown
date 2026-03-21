@@ -69,12 +69,18 @@ class WorkDir:
                     return target
             except OSError:
                 pass
-            target.unlink()
+            try:
+                target.unlink()
+            except OSError as exc:
+                raise WorkDirError(f"failed to replace staged input at {target}: {exc}") from exc
 
         try:
             target.symlink_to(source.resolve())
         except OSError:
-            shutil.copy2(source, target)
+            try:
+                shutil.copy2(source, target)
+            except OSError as exc:
+                raise WorkDirError(f"failed to stage input into {target}: {exc}") from exc
 
         return target
 

@@ -107,3 +107,46 @@ def test_ensure_structure_wraps_oserror(tmp_path, monkeypatch):
 
     with pytest.raises(WorkDirError, match="failed to create workdir structure"):
         workdir.ensure_structure()
+
+
+def test_stage_input_wraps_unlink_oserror(tmp_path, monkeypatch):
+    source_a = tmp_path / "a.pdf"
+    source_b = tmp_path / "b.pdf"
+    source_a.write_bytes(b"%PDF-1.4 A\n")
+    source_b.write_bytes(b"%PDF-1.4 B\n")
+
+    workdir = WorkDir(tmp_path / "output")
+    workdir.ensure_structure()
+    workdir.stage_input(source_a)
+
+    original_unlink = Path.unlink
+
+    def _failing_unlink(self, *args, **kwargs):
+        if self == workdir.input_dir / "source.pdf":
+            raise PermissionError("cannot remove")
+        return original_unlink(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", _failing_unlink)
+
+    with pytest.raises(WorkDirError, match="failed to replace staged input"):
+        workdir.stage_input(source_b)
+
+
+def test_stage_input_wraps_copy_oserror(tmp_path, monkeypatch):
+    source = tmp_path / "source.pdf"
+    source.write_bytes(b"%PDF-1.4\n")
+
+    workdir = WorkDir(tmp_path / "output")
+    workdir.ensure_structure()
+
+    def _failing_symlink(self, target):
+        raise OSError("symlink disabled")
+
+    def _failing_copy(src, dst, *, follow_symlinks=True):
+        raise OSError("copy failed")
+
+    monkeypatch.setattr(Path, "symlink_to", _failing_symlink)
+    monkeypatch.setattr("docdown.workdir.shutil.copy2", _failing_copy)
+
+    with pytest.raises(WorkDirError, match="failed to stage input into"):
+        workdir.stage_input(source)
