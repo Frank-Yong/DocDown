@@ -184,3 +184,33 @@ def test_min_output_ratio_boolean_is_rejected(tmp_path):
 
     with pytest.raises(ConfigError, match="validation.min_output_ratio must be a number, not a boolean"):
         load_config(cfg_path)
+
+
+def test_chunk_size_float_is_rejected(tmp_path):
+    cfg_path = tmp_path / "docdown.yaml"
+    cfg_path.write_text(
+        "\n".join(
+            [
+                "chunk_size: 2.9",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="chunk_size must be an integer, not a float"):
+        load_config(cfg_path)
+
+
+def test_parallel_workers_float_is_rejected(tmp_path):
+    cfg_path = tmp_path / "docdown.yaml"
+    cfg_path.write_text(
+        "\n".join(
+            [
+                "parallel_workers: 3.5",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="parallel_workers must be an integer, not a float"):
+        load_config(cfg_path)
