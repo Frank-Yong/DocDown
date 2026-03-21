@@ -53,7 +53,7 @@ class WorkDir:
             raise WorkDirError(f"failed to create workdir structure at {self.base}: {exc}") from exc
 
     def stage_input(self, source_pdf: Path) -> Path:
-        """Place the input PDF in workdir/input as a symlink or copied file."""
+        """Stage the input PDF at workdir/input/source.pdf via symlink or copy."""
 
         source = Path(source_pdf)
         if not source.exists() or not source.is_file():
