@@ -45,9 +45,12 @@ class WorkDir:
         if self.base.exists() and not self.base.is_dir():
             raise WorkDirError(f"workdir must be a directory: {self.base}")
 
-        self.base.mkdir(parents=True, exist_ok=True)
-        for name in _WORKDIR_SUBDIRS:
-            (self.base / name).mkdir(parents=True, exist_ok=True)
+        try:
+            self.base.mkdir(parents=True, exist_ok=True)
+            for name in _WORKDIR_SUBDIRS:
+                (self.base / name).mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise WorkDirError(f"failed to create workdir structure at {self.base}: {exc}") from exc
 
     def stage_input(self, source_pdf: Path) -> Path:
         """Place the input PDF in workdir/input as a symlink or copied file."""

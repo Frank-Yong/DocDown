@@ -92,3 +92,18 @@ def test_ensure_structure_rejects_file_as_workdir(tmp_path):
 
     with pytest.raises(WorkDirError, match="workdir must be a directory"):
         WorkDir(not_dir).ensure_structure()
+
+
+def test_ensure_structure_wraps_oserror(tmp_path, monkeypatch):
+    workdir = WorkDir(tmp_path / "output")
+    original_mkdir = Path.mkdir
+
+    def _failing_mkdir(self, *args, **kwargs):
+        if self == workdir.base:
+            raise PermissionError("permission denied")
+        return original_mkdir(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", _failing_mkdir)
+
+    with pytest.raises(WorkDirError, match="failed to create workdir structure"):
+        workdir.ensure_structure()
