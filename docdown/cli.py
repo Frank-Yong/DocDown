@@ -82,9 +82,18 @@ def main(
         raise click.ClickException("No input PDF provided. Pass INPUT_PDF or set 'input' in docdown.yaml.")
 
     logger = configure_logging(cfg.workdir, cfg.log_level)
-    logger.info("DocDown v%s", _version())
-    logger.info("Input:   %s", cfg.input)
-    logger.info("Workdir: %s", cfg.workdir)
+    version_text = f"DocDown v{_version()}"
+    input_text = f"Input:   {cfg.input}"
+    workdir_text = f"Workdir: {cfg.workdir}"
+
+    # Keep CLI summaries on stdout while also recording them in logs.
+    click.echo(version_text)
+    click.echo(input_text)
+    click.echo(workdir_text)
+
+    logger.info(version_text)
+    logger.info(input_text)
+    logger.info(workdir_text)
 
 
 def _version():
