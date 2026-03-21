@@ -41,6 +41,8 @@ def configure_logging(workdir: Path, level: str = "INFO") -> logging.Logger:
     log_file = log_dir / "run.log"
 
     logger = logging.getLogger(LOGGER_NAME)
+    for handler in logger.handlers:
+        handler.close()
     logger.handlers.clear()
     logger.propagate = False
     logger.setLevel(_normalize_level(level))
