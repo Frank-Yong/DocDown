@@ -72,6 +72,8 @@ class WorkDir:
                     return target
             except OSError:
                 pass
+            if _copied_input_matches(source, target):
+                return target
             try:
                 target.unlink()
             except OSError as exc:
@@ -138,3 +140,38 @@ class WorkDir:
 
     def final_markdown(self) -> Path:
         return self.base / "final.md"
+
+
+def _copied_input_matches(source: Path, target: Path) -> bool:
+    """Return True when staged target looks like an up-to-date copied source."""
+
+    try:
+        source_stat = source.stat()
+        target_stat = target.stat()
+    except OSError:
+        return False
+
+    if source_stat.st_size != target_stat.st_size:
+        return False
+
+    # copy2 preserves timestamps; allow 1-second tolerance for filesystem precision.
+    if abs(source_stat.st_mtime - target_stat.st_mtime) > 1.0:
+        return False
+
+    return _files_equal(source, target)
+
+
+def _files_equal(left: Path, right: Path) -> bool:
+    """Compare file bytes in chunks to avoid loading large PDFs fully into memory."""
+
+    try:
+        with left.open("rb") as left_handle, right.open("rb") as right_handle:
+            while True:
+                left_block = left_handle.read(1024 * 1024)
+                right_block = right_handle.read(1024 * 1024)
+                if left_block != right_block:
+                    return False
+                if not left_block:
+                    return True
+    except OSError:
+        return False

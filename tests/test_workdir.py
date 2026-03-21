@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import docdown.workdir as workdir_module
 from docdown.workdir import WorkDir, WorkDirError
 
 
@@ -56,6 +57,32 @@ def test_stage_input_creates_structure_when_missing(tmp_path):
     assert workdir.input_dir.is_dir()
     assert staged == workdir.input_dir / "source.pdf"
     assert staged.exists()
+
+
+def test_stage_input_copy_fallback_is_idempotent(tmp_path, monkeypatch):
+    source = tmp_path / "source.pdf"
+    source.write_bytes(b"%PDF-1.4\n")
+
+    workdir = WorkDir(tmp_path / "output")
+    original_copy2 = workdir_module.shutil.copy2
+    copy_calls = 0
+
+    def _failing_symlink(self, target):
+        raise OSError("symlink disabled")
+
+    def _counting_copy(src, dst, *, follow_symlinks=True):
+        nonlocal copy_calls
+        copy_calls += 1
+        return original_copy2(src, dst, follow_symlinks=follow_symlinks)
+
+    monkeypatch.setattr(Path, "symlink_to", _failing_symlink)
+    monkeypatch.setattr("docdown.workdir.shutil.copy2", _counting_copy)
+
+    first = workdir.stage_input(source)
+    second = workdir.stage_input(source)
+
+    assert first == second
+    assert copy_calls == 1
 
 
 def test_artifact_path_generation_for_chunk_outputs(tmp_path):
