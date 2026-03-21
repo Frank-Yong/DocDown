@@ -10,13 +10,17 @@ None (first task).
 
 ## Acceptance Criteria
 
-- [ ] Python package initialized (`docdown/`) with `__init__.py`.
-- [ ] `pyproject.toml` (or `setup.cfg`) with project metadata and dependency declarations.
-- [ ] Entry point defined: `docdown` CLI command.
+- [x] Python package initialized (`docdown/`) with `__init__.py`.
+- [x] `pyproject.toml` (or `setup.cfg`) with project metadata and dependency declarations.
+- [x] Entry point defined: `docdown` CLI command.
 - [ ] `requirements.txt` or equivalent lockfile with all dependencies pinned.
-- [ ] Basic `README.md` at project root.
-- [ ] `.gitignore` configured for Python projects.
-- [ ] Project installs cleanly in a fresh virtual environment (`pip install -e .`).
+- [x] Basic `README.md` at project root.
+- [x] `.gitignore` configured for Python projects.
+- [x] Project installs cleanly in a fresh virtual environment (`pip install -e .`).
+
+### Status note
+
+Task 1.1 is functionally complete except for dependency pinning lockfiles. The project currently uses version ranges in `pyproject.toml` and does not yet include a pinned `requirements` lockfile equivalent.
 
 ## Implementation Notes
 

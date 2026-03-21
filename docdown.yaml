@@ -1,0 +1,14 @@
+# DocDown configuration schema and defaults
+# input: /path/to/source.pdf
+workdir: ./output
+chunk_size: 50
+parallel_workers: 4
+extractor: grobid
+grobid_url: http://localhost:8070
+fallback_extractor: pdfminer
+table_extraction: true
+llm_cleanup: false
+llm_model: null
+validation:
+  min_output_ratio: 0.01
+  max_empty_chunks: 0

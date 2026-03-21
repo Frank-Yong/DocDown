@@ -1,5 +1,10 @@
 # DocDown — Fast-Path 01 (Quality-First MVP)
 
+## Execution Status
+
+- Selected for implementation.
+- Current active task: [task-1.2-configuration.md](task-1.2-configuration.md).
+
 ## Motivation
 
 The original plan has 25 tasks across 9 stages, ordered strictly stage-by-stage. This alternative groups them into three delivery phases. Each phase produces a working pipeline that can be tested with real PDFs. All original tasks remain in scope — nothing is cut, only reordered.
