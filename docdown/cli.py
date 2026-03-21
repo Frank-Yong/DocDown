@@ -3,6 +3,7 @@
 import click
 
 from docdown.config import ConfigError, load_config
+from docdown.utils.logging import configure_logging
 
 
 @click.command()
@@ -28,6 +29,12 @@ from docdown.config import ConfigError, load_config
 @click.option("--table-extraction/--no-table-extraction", default=None, help="Enable table extraction")
 @click.option("--llm-cleanup/--no-llm-cleanup", default=None, help="Enable LLM cleanup pipeline")
 @click.option("--llm-model", type=str, default=None, help="LLM model identifier")
+@click.option(
+    "--log-level",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "WARN"], case_sensitive=False),
+    default=None,
+    help="Log verbosity level",
+)
 @click.option("--min-output-ratio", type=float, default=None, help="Validation minimum output ratio")
 @click.option("--max-empty-chunks", type=int, default=None, help="Validation max empty chunks")
 def main(
@@ -42,6 +49,7 @@ def main(
     table_extraction,
     llm_cleanup,
     llm_model,
+    log_level,
     min_output_ratio,
     max_empty_chunks,
 ):
@@ -58,6 +66,7 @@ def main(
         "table_extraction": table_extraction,
         "llm_cleanup": llm_cleanup,
         "llm_model": llm_model,
+        "log_level": log_level,
         "validation": {
             "min_output_ratio": min_output_ratio,
             "max_empty_chunks": max_empty_chunks,
@@ -72,9 +81,19 @@ def main(
     if cfg.input is None:
         raise click.ClickException("No input PDF provided. Pass INPUT_PDF or set 'input' in docdown.yaml.")
 
-    click.echo(f"DocDown v{_version()}")
-    click.echo(f"Input:   {cfg.input}")
-    click.echo(f"Workdir: {cfg.workdir}")
+    logger = configure_logging(cfg.workdir, cfg.log_level)
+    version_text = f"DocDown v{_version()}"
+    input_text = f"Input:   {cfg.input}"
+    workdir_text = f"Workdir: {cfg.workdir}"
+
+    # Keep CLI summaries on stdout while also recording them in logs.
+    click.echo(version_text)
+    click.echo(input_text)
+    click.echo(workdir_text)
+
+    logger.info(version_text)
+    logger.info(input_text)
+    logger.info(workdir_text)
 
 
 def _version():
