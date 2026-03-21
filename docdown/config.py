@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import math
 from pathlib import Path
 from typing import Any
 
@@ -192,6 +193,8 @@ def _validate_semantics(cfg: Config) -> None:
         raise ConfigError(f"extractor must be one of: {sorted(_VALID_EXTRACTORS)}")
     if cfg.fallback_extractor not in _VALID_EXTRACTORS:
         raise ConfigError(f"fallback_extractor must be one of: {sorted(_VALID_EXTRACTORS)}")
+    if not math.isfinite(cfg.validation.min_output_ratio):
+        raise ConfigError("validation.min_output_ratio must be a finite number.")
     if cfg.validation.min_output_ratio <= 0:
         raise ConfigError("validation.min_output_ratio must be greater than 0.")
     if cfg.validation.max_empty_chunks < 0:

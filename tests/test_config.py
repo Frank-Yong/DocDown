@@ -214,3 +214,13 @@ def test_parallel_workers_float_is_rejected(tmp_path):
 
     with pytest.raises(ConfigError, match="parallel_workers must be an integer, not a float"):
         load_config(cfg_path)
+
+
+def test_min_output_ratio_nan_is_rejected():
+    with pytest.raises(ConfigError, match="validation.min_output_ratio must be a finite number"):
+        load_config(cli_overrides={"validation": {"min_output_ratio": float("nan")}})
+
+
+def test_min_output_ratio_infinity_is_rejected():
+    with pytest.raises(ConfigError, match="validation.min_output_ratio must be a finite number"):
+        load_config(cli_overrides={"validation": {"min_output_ratio": float("inf")}})
