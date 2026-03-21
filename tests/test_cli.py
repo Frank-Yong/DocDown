@@ -12,6 +12,11 @@ def test_cli_shows_version(tmp_path):
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
     assert result.exit_code == 0
+    assert f"DocDown v{__version__}" in result.output
+    assert "Input:" in result.output
+    assert "Workdir:" in result.output
+
+    # Startup summaries are also logged through stderr.
     assert f"DocDown v{__version__}" in result.stderr
     assert "Input:" in result.stderr
     assert "Workdir:" in result.stderr
