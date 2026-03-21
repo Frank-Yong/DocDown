@@ -108,6 +108,24 @@ def test_artifact_path_rejects_invalid_inputs(tmp_path):
     with pytest.raises(WorkDirError, match="unknown artifact_type"):
         workdir.artifact_path("unknown", 1)
 
+    with pytest.raises(WorkDirError, match="ext must not contain path separators"):
+        workdir.extracted(1, "../xml")
+
+    with pytest.raises(WorkDirError, match="ext must not contain path separators"):
+        workdir.markdown(1, "nested/md")
+
+    with pytest.raises(WorkDirError, match="ext must not contain path separators"):
+        workdir.table_markdown(1, 1, "bad\\md")
+
+    with pytest.raises(WorkDirError, match="ext must not be empty"):
+        workdir.extracted(1, ".")
+
+
+def test_artifact_path_normalizes_leading_dot_extension(tmp_path):
+    workdir = WorkDir(tmp_path / "output")
+
+    assert workdir.extracted(2, ".tei") == workdir.base / "extracted" / "chunk-0002.tei"
+
 
 def test_stage_input_replaces_previous_staged_file(tmp_path):
     source_a = tmp_path / "a.pdf"

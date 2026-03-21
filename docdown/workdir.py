@@ -108,17 +108,17 @@ class WorkDir:
             return self.chunks_dir / f"{chunk_token}.pdf"
 
         if artifact_type == "extracted":
-            extension = ext or "xml"
+            extension = _normalize_extension(ext or "xml")
             return self.extracted_dir / f"{chunk_token}.{extension}"
 
         if artifact_type == "markdown":
-            extension = ext or "md"
+            extension = _normalize_extension(ext or "md")
             return self.markdown_dir / f"{chunk_token}.{extension}"
 
         if artifact_type == "tables":
             if table_number is None or table_number < 1:
                 raise WorkDirError("tables artifacts require table_number >= 1")
-            extension = ext or "md"
+            extension = _normalize_extension(ext or "md")
             return self.tables_dir / f"{chunk_token}-table-{table_number:03d}.{extension}"
 
         raise WorkDirError(f"unknown artifact_type: {artifact_type}")
@@ -175,3 +175,14 @@ def _files_equal(left: Path, right: Path) -> bool:
                     return True
     except OSError:
         return False
+
+
+def _normalize_extension(ext: str) -> str:
+    """Normalize and validate extension tokens used in generated filenames."""
+
+    normalized = str(ext).lstrip(".")
+    if not normalized:
+        raise WorkDirError("ext must not be empty.")
+    if "/" in normalized or "\\" in normalized or ".." in normalized:
+        raise WorkDirError("ext must not contain path separators or '..'.")
+    return normalized
