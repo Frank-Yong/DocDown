@@ -59,6 +59,9 @@ class WorkDir:
         if not source.exists() or not source.is_file():
             raise WorkDirError(f"input file not found: {source}")
 
+        # Allow direct stage_input() calls without requiring ensure_structure() first.
+        self.ensure_structure()
+
         target = self.input_dir / "source.pdf"
 
         if target.exists() or target.is_symlink():

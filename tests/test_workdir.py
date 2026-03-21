@@ -46,6 +46,18 @@ def test_stage_input_symlink_or_copy_into_input_directory(tmp_path):
     assert staged.read_bytes() == source.read_bytes()
 
 
+def test_stage_input_creates_structure_when_missing(tmp_path):
+    source = tmp_path / "source.pdf"
+    source.write_bytes(b"%PDF-1.4\n")
+
+    workdir = WorkDir(tmp_path / "output")
+    staged = workdir.stage_input(source)
+
+    assert workdir.input_dir.is_dir()
+    assert staged == workdir.input_dir / "source.pdf"
+    assert staged.exists()
+
+
 def test_artifact_path_generation_for_chunk_outputs(tmp_path):
     workdir = WorkDir(tmp_path / "output")
 
