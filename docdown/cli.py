@@ -83,9 +83,9 @@ def main(
         raise click.ClickException("No input PDF provided. Pass INPUT_PDF or set 'input' in docdown.yaml.")
 
     try:
-        workdir = WorkDir(cfg.workdir)
-        workdir.ensure_structure()
-        staged_input = workdir.stage_input(cfg.input)
+        work_dir = WorkDir(cfg.workdir)
+        work_dir.ensure_structure()
+        staged_input = work_dir.stage_input(cfg.input)
     except WorkDirError as exc:
         raise click.ClickException(str(exc)) from exc
 
