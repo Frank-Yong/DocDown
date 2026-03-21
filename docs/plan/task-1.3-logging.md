@@ -32,6 +32,75 @@ Set up structured logging with configurable levels, file output, and per-chunk c
 - Create a `ChunkAdapter` or use `LoggerAdapter` to inject chunk ID into log records.
 - File handler is added once `workdir` is created (Task 1.4).
 
+### Artifact Class Diagram
+
+```mermaid
+classDiagram
+	class Config {
+		+Path workdir
+		+str log_level
+	}
+
+	class CliMain {
+		<<module: docdown/cli.py>>
+		+main(..., log_level) None
+	}
+
+	class LoggingModule {
+		<<module: docdown/utils/logging.py>>
+		+configure_logging(workdir, level) Logger
+		+get_logger() Logger
+		+get_chunk_logger(chunk_number) ChunkAdapter
+		+log_tool_command(command, chunk_number) None
+		+log_intermediate_path(path, label, chunk_number) None
+	}
+
+	class ChunkAdapter {
+		<<LoggerAdapter>>
+		+process(msg, kwargs) tuple
+	}
+
+	class RunLog {
+		<<file: workdir/run.log>>
+		+UTF-8 log sink
+	}
+
+	class StderrSink {
+		<<stream: stderr>>
+		+console log sink
+	}
+
+	class DocdownYaml {
+		<<file: docdown.yaml>>
+		+log_level: INFO
+	}
+
+	class TestLogging {
+		<<tests/test_logging.py>>
+		+format/file/chunk/debug coverage
+	}
+
+	class TestCli {
+		<<tests/test_cli.py>>
+		+CLI log-level and output coverage
+	}
+
+	class TestConfig {
+		<<tests/test_config.py>>
+		+log_level config validation coverage
+	}
+
+	CliMain ..> Config : loads
+	CliMain ..> LoggingModule : calls configure_logging
+	Config ..> DocdownYaml : defaults/overrides
+	LoggingModule --> ChunkAdapter : creates
+	LoggingModule --> RunLog : writes
+	LoggingModule --> StderrSink : writes
+	TestLogging ..> LoggingModule : verifies behavior
+	TestCli ..> CliMain : verifies integration
+	TestConfig ..> Config : verifies log_level rules
+```
+
 ## References
 
 - [technical-design.md §9.2 — Logging](../technical-design.md)
