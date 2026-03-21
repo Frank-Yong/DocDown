@@ -3,6 +3,8 @@
 import re
 from pathlib import Path
 
+import pytest
+
 from docdown.utils.logging import (
     configure_logging,
     get_chunk_logger,
@@ -58,3 +60,8 @@ def test_debug_helpers_log_command_and_path(tmp_path):
 def test_get_logger_returns_central_logger(tmp_path):
     configured = configure_logging(tmp_path, "INFO")
     assert get_logger() is configured
+
+
+def test_invalid_log_level_raises_error(tmp_path):
+    with pytest.raises(ValueError, match="Unknown log level"):
+        configure_logging(tmp_path, "VERBOSE")

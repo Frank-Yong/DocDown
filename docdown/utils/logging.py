@@ -102,7 +102,10 @@ def _normalize_level(level: str) -> int:
     upper = str(level).upper()
     if upper == "WARN":
         upper = "WARNING"
-    return getattr(logging, upper, logging.INFO)
+    numeric_level = getattr(logging, upper, None)
+    if not isinstance(numeric_level, int):
+        raise ValueError(f"Unknown log level: {level}")
+    return numeric_level
 
 
 def _normalize_chunk(chunk: int | str | None) -> str:
