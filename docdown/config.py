@@ -11,6 +11,7 @@ import yaml
 
 
 _VALID_EXTRACTORS = {"grobid", "pdfminer"}
+_VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "WARN"}
 
 
 class ConfigError(ValueError):
@@ -39,6 +40,7 @@ class Config:
     table_extraction: bool = True
     llm_cleanup: bool = False
     llm_model: str | None = None
+    log_level: str = "INFO"
     validation: ValidationConfig = field(default_factory=ValidationConfig)
 
 
@@ -73,6 +75,7 @@ def _default_data() -> dict[str, Any]:
         "table_extraction": defaults.table_extraction,
         "llm_cleanup": defaults.llm_cleanup,
         "llm_model": defaults.llm_model,
+        "log_level": defaults.log_level,
         "validation": {
             "min_output_ratio": defaults.validation.min_output_ratio,
             "max_empty_chunks": defaults.validation.max_empty_chunks,
@@ -159,6 +162,7 @@ def _build_and_validate(data: dict[str, Any]) -> Config:
             table_extraction=_require_bool(data["table_extraction"], "table_extraction"),
             llm_cleanup=_require_bool(data["llm_cleanup"], "llm_cleanup"),
             llm_model=str(data["llm_model"]) if data["llm_model"] is not None else None,
+            log_level=str(data["log_level"]).upper(),
             validation=validation_cfg,
         )
     except ConfigError:
@@ -193,6 +197,8 @@ def _validate_semantics(cfg: Config) -> None:
         raise ConfigError(f"extractor must be one of: {sorted(_VALID_EXTRACTORS)}")
     if cfg.fallback_extractor not in _VALID_EXTRACTORS:
         raise ConfigError(f"fallback_extractor must be one of: {sorted(_VALID_EXTRACTORS)}")
+    if cfg.log_level not in _VALID_LOG_LEVELS:
+        raise ConfigError(f"log_level must be one of: {sorted(_VALID_LOG_LEVELS)}")
     if not math.isfinite(cfg.validation.min_output_ratio):
         raise ConfigError("validation.min_output_ratio must be a finite number.")
     if cfg.validation.min_output_ratio <= 0:

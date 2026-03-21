@@ -10,12 +10,12 @@ Set up structured logging with configurable levels, file output, and per-chunk c
 
 ## Acceptance Criteria
 
-- [ ] All pipeline output is logged via a central logger (no bare `print` statements).
-- [ ] Log output writes to both stderr and `workdir/run.log`.
-- [ ] Log level is configurable (default: `INFO`).
-- [ ] Each log entry includes: timestamp, level, and chunk identifier (where applicable).
-- [ ] `DEBUG` level includes tool command lines and intermediate file paths.
-- [ ] Unit tests verify log format and file output.
+- [x] All pipeline output is logged via a central logger (no bare `print` statements).
+- [x] Log output writes to both stderr and `workdir/run.log`.
+- [x] Log level is configurable (default: `INFO`).
+- [x] Each log entry includes: timestamp, level, and chunk identifier (where applicable).
+- [x] `DEBUG` level includes tool command lines and intermediate file paths.
+- [x] Unit tests verify log format and file output.
 
 ## Implementation Notes
 

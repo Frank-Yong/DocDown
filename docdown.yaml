@@ -9,6 +9,7 @@ fallback_extractor: pdfminer
 table_extraction: true
 llm_cleanup: false
 llm_model: null
+log_level: INFO
 validation:
   min_output_ratio: 0.01
   max_empty_chunks: 0
