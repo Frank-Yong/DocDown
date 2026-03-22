@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 import subprocess
 
-from docdown.utils.logging import get_logger
+from docdown.utils.logging import get_logger, log_tool_command
 
 
 @dataclass(frozen=True)
@@ -84,6 +84,7 @@ def _qpdf_command(flag: str, input_path: Path, *, password: str | None = None) -
 
 
 def _run_qpdf(command: list[str]) -> subprocess.CompletedProcess[str]:
+    log_tool_command(_redact_command(command))
     try:
         return subprocess.run(command, capture_output=True, text=True, check=False)
     except OSError as exc:

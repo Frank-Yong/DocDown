@@ -96,3 +96,32 @@ def test_validate_pdf_redacts_password_in_qpdf_execution_error(tmp_path, monkeyp
 	error_text = str(exc_info.value)
 	assert "--password=***" in error_text
 	assert "top-secret" not in error_text
+
+
+def test_validate_pdf_logs_redacted_qpdf_commands(tmp_path, monkeypatch):
+	input_pdf = tmp_path / "input.pdf"
+	input_pdf.write_bytes(b"%PDF-1.4\ncontent")
+
+	responses = iter(
+		[
+			_cp(0, stdout="File is not encrypted"),
+			_cp(0, stdout="checking passed"),
+			_cp(0, stdout="7\n"),
+		]
+	)
+	logged_commands: list[str] = []
+
+	def _fake_run(command, capture_output, text, check):
+		return next(responses)
+
+	def _capture_tool_command(command, chunk_number=None):
+		logged_commands.append(str(command))
+
+	monkeypatch.setattr("docdown.stages.split.subprocess.run", _fake_run)
+	monkeypatch.setattr("docdown.stages.split.log_tool_command", _capture_tool_command)
+
+	validate_pdf(input_pdf, password="super-secret")
+
+	assert len(logged_commands) == 3
+	assert all("--password=***" in cmd for cmd in logged_commands)
+	assert all("super-secret" not in cmd for cmd in logged_commands)
