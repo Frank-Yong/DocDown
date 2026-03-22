@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
+import os
 from pathlib import Path
 import subprocess
+import tempfile
 
 from docdown.utils.logging import get_logger, log_tool_command
 
@@ -37,7 +39,7 @@ def validate_pdf(input_pdf: Path, password: str | None = None, logger: logging.L
             "Provide a PDF password before running DocDown."
         )
 
-    check_result = _run_qpdf(_qpdf_command("--check", input_path, password=password))
+    check_result = _run_qpdf(_qpdf_command("--check", input_path), password=password)
     if check_result.returncode == 2:
         diagnostics = _combined_output(check_result)
         raise PdfValidationError(f"Invalid or corrupted PDF: {diagnostics}")
@@ -47,7 +49,7 @@ def validate_pdf(input_pdf: Path, password: str | None = None, logger: logging.L
     if check_result.returncode == 3:
         active_logger.warning("qpdf reported warnings but PDF is usable: %s", _combined_output(check_result))
 
-    count_result = _run_qpdf(_qpdf_command("--show-npages", input_path, password=password))
+    count_result = _run_qpdf(_qpdf_command("--show-npages", input_path), password=password)
     if count_result.returncode != 0:
         diagnostics = _combined_output(count_result)
         raise PdfValidationError(f"Could not determine PDF page count: {diagnostics}")
@@ -60,7 +62,7 @@ def validate_pdf(input_pdf: Path, password: str | None = None, logger: logging.L
 
 
 def _is_encrypted(input_path: Path, password: str | None) -> bool:
-    result = _run_qpdf(_qpdf_command("--show-encryption", input_path, password=password))
+    result = _run_qpdf(_qpdf_command("--show-encryption", input_path), password=password)
     combined = _combined_output(result).lower()
 
     if "not encrypted" in combined:
@@ -75,20 +77,48 @@ def _is_encrypted(input_path: Path, password: str | None) -> bool:
     return False
 
 
-def _qpdf_command(flag: str, input_path: Path, *, password: str | None = None) -> list[str]:
-    command = ["qpdf"]
-    if password is not None:
-        command.append(f"--password={password}")
-    command.extend([flag, str(input_path)])
-    return command
+def _qpdf_command(flag: str, input_path: Path) -> list[str]:
+    return ["qpdf", flag, str(input_path)]
 
 
-def _run_qpdf(command: list[str]) -> subprocess.CompletedProcess[str]:
-    log_tool_command(_redact_command(command))
+def _run_qpdf(command: list[str], *, password: str | None = None) -> subprocess.CompletedProcess[str]:
+    command_to_run, password_file = _inject_password(command, password)
+    log_tool_command(_redact_command(command_to_run))
     try:
-        return subprocess.run(command, capture_output=True, text=True, check=False)
+        return subprocess.run(command_to_run, capture_output=True, text=True, check=False)
     except OSError as exc:
-        raise PdfValidationError(f"Failed to execute qpdf command {_redact_command(command)}: {exc}") from exc
+        raise PdfValidationError(f"Failed to execute qpdf command {_redact_command(command_to_run)}: {exc}") from exc
+    finally:
+        _cleanup_password_file(password_file)
+
+
+def _inject_password(command: list[str], password: str | None) -> tuple[list[str], Path | None]:
+    """Attach password to qpdf command, preferring --password-file over argv."""
+
+    if password is None:
+        return list(command), None
+
+    try:
+        handle, path_text = tempfile.mkstemp(prefix="docdown-qpdf-", suffix=".pwd", text=True)
+        with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as password_file:
+            password_file.write(password)
+            password_file.write("\n")
+        path = Path(path_text)
+        return [command[0], f"--password-file={path}", *command[1:]], path
+    except OSError:
+        # Fallback for environments where temporary files cannot be created.
+        return [command[0], f"--password={password}", *command[1:]], None
+
+
+def _cleanup_password_file(password_file: Path | None) -> None:
+    """Best-effort cleanup for temporary password files used by qpdf."""
+
+    if password_file is None:
+        return
+    try:
+        password_file.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 def _redact_command(command: list[str]) -> str:

@@ -102,7 +102,10 @@ def test_validate_pdf_encrypted_with_empty_password_is_allowed(tmp_path, monkeyp
     result = validate_pdf(input_pdf, password="")
 
     assert result.page_count == 3
-    assert any(arg == "--password=" for cmd in seen_commands for arg in cmd)
+    assert any(
+        any(arg.startswith("--password-file=") or arg == "--password=" for arg in cmd)
+        for cmd in seen_commands
+    )
 
 
 def test_validate_pdf_page_count_parse_failure_raises_clear_error(tmp_path, monkeypatch):
@@ -139,8 +142,8 @@ def test_validate_pdf_redacts_password_in_qpdf_execution_error(tmp_path, monkeyp
         validate_pdf(input_pdf, password="top-secret")
 
     error_text = str(exc_info.value)
-    assert "--password=***" in error_text
     assert "top-secret" not in error_text
+    assert "--password-file=" in error_text or "--password=***" in error_text
 
 
 def test_validate_pdf_logs_redacted_qpdf_commands(tmp_path, monkeypatch):
@@ -168,5 +171,5 @@ def test_validate_pdf_logs_redacted_qpdf_commands(tmp_path, monkeypatch):
     validate_pdf(input_pdf, password="super-secret")
 
     assert len(logged_commands) == 3
-    assert all("--password=***" in cmd for cmd in logged_commands)
+    assert all("--password-file=" in cmd or "--password=***" in cmd for cmd in logged_commands)
     assert all("super-secret" not in cmd for cmd in logged_commands)
