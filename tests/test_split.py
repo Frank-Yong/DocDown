@@ -31,9 +31,10 @@ def test_validate_pdf_valid_input_logs_page_count_and_size(tmp_path, monkeypatch
 		return next(responses)
 
 	monkeypatch.setattr("docdown.stages.split.subprocess.run", _fake_run)
+	test_logger = logging.getLogger("tests.split")
 
-	with caplog.at_level(logging.INFO):
-		result = validate_pdf(input_pdf)
+	with caplog.at_level(logging.INFO, logger="tests.split"):
+		result = validate_pdf(input_pdf, logger=test_logger)
 
 	assert result.page_count == 12
 	assert result.file_size_bytes == input_pdf.stat().st_size

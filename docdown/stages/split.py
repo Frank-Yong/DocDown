@@ -7,6 +7,8 @@ import logging
 from pathlib import Path
 import subprocess
 
+from docdown.utils.logging import get_logger
+
 
 @dataclass(frozen=True)
 class PdfValidationResult:
@@ -27,7 +29,7 @@ def validate_pdf(input_pdf: Path, password: str | None = None, logger: logging.L
     if not input_path.exists() or not input_path.is_file():
         raise PdfValidationError(f"Input PDF not found: {input_path}")
 
-    active_logger = logger or logging.getLogger()
+    active_logger = logger or get_logger()
     encrypted = _is_encrypted(input_path, password)
     if encrypted and not password:
         raise PdfValidationError(
