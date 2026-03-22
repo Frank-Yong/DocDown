@@ -16,7 +16,7 @@ Validate the input PDF and determine its total page count before splitting.
 - [x] Encrypted PDFs are detected; if a password is not provided, abort with a message.
 - [x] Total page count is extracted (`qpdf --show-npages`).
 - [x] Page count and file size are logged at `INFO` level.
-- [x] Unit tests cover: valid PDF, missing file, corrupted file, encrypted file.
+- [x] Unit tests cover: valid PDF, missing file, corrupted file, encrypted file, page-count parsing failure.
 
 Implemented in:
 - `docdown/stages/split.py`
