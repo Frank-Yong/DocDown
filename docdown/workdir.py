@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 
 
 _WORKDIR_SUBDIRS = ("input", "chunks", "extracted", "markdown", "tables")
+_INPUT_MANIFEST_NAME = "source.manifest.json"
 
 
 class WorkDirError(ValueError):
@@ -63,6 +65,7 @@ class WorkDir:
         self.ensure_structure()
 
         target = self.input_dir / "source.pdf"
+        manifest_path = self.input_dir / _INPUT_MANIFEST_NAME
 
         if target.exists() or target.is_symlink():
             if target.is_dir():
@@ -72,7 +75,7 @@ class WorkDir:
                     return target
             except OSError:
                 pass
-            if _copied_input_matches(source, target):
+            if _copy_manifest_matches(source, target, manifest_path):
                 return target
             try:
                 target.unlink()
@@ -81,9 +84,11 @@ class WorkDir:
 
         try:
             target.symlink_to(source.resolve())
+            _delete_manifest_if_exists(manifest_path)
         except OSError:
             try:
                 shutil.copy2(source, target)
+                _write_copy_manifest(manifest_path, source, target)
             except OSError as exc:
                 raise WorkDirError(f"failed to stage input into {target}: {exc}") from exc
 
@@ -142,39 +147,80 @@ class WorkDir:
         return self.base / "final.md"
 
 
-def _copied_input_matches(source: Path, target: Path) -> bool:
-    """Return True when staged target looks like an up-to-date copied source."""
+def _copy_manifest_matches(source: Path, target: Path, manifest_path: Path) -> bool:
+    """Return True when cached metadata says the copied input is up-to-date."""
+
+    if not target.exists() or target.is_symlink():
+        return False
+
+    manifest = _read_manifest(manifest_path)
+    if manifest is None:
+        return False
+
+    expected_source = manifest.get("source")
+    expected_target = manifest.get("target")
+    if not isinstance(expected_source, dict) or not isinstance(expected_target, dict):
+        return False
+
+    current_source = _source_fingerprint(source)
+    current_target = _target_fingerprint(target)
+    return current_source == expected_source and current_target == expected_target
+
+
+def _write_copy_manifest(manifest_path: Path, source: Path, target: Path) -> None:
+    """Write lightweight metadata used to skip redundant copy fallback operations."""
+
+    manifest = {
+        "source": _source_fingerprint(source),
+        "target": _target_fingerprint(target),
+    }
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+
+
+def _read_manifest(manifest_path: Path) -> dict[str, object] | None:
+    """Read copy manifest data and return None when unavailable or invalid."""
 
     try:
-        source_stat = source.stat()
-        target_stat = target.stat()
-    except OSError:
-        return False
-
-    if source_stat.st_size != target_stat.st_size:
-        return False
-
-    # copy2 preserves timestamps; allow 1-second tolerance for filesystem precision.
-    if abs(source_stat.st_mtime - target_stat.st_mtime) > 1.0:
-        return False
-
-    return _files_equal(source, target)
+        raw = manifest_path.read_text(encoding="utf-8")
+        data = json.loads(raw)
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
 
 
-def _files_equal(left: Path, right: Path) -> bool:
-    """Compare file bytes in chunks to avoid loading large PDFs fully into memory."""
+def _delete_manifest_if_exists(manifest_path: Path) -> None:
+    """Best-effort cleanup for stale copy manifests after symlink staging."""
 
     try:
-        with left.open("rb") as left_handle, right.open("rb") as right_handle:
-            while True:
-                left_block = left_handle.read(1024 * 1024)
-                right_block = right_handle.read(1024 * 1024)
-                if left_block != right_block:
-                    return False
-                if not left_block:
-                    return True
+        if manifest_path.exists():
+            manifest_path.unlink()
     except OSError:
-        return False
+        pass
+
+
+def _source_fingerprint(path: Path) -> dict[str, object]:
+    """Return source metadata used to detect whether staging input changed."""
+
+    stat = path.stat()
+    try:
+        resolved = str(path.resolve())
+    except OSError:
+        resolved = str(path.absolute())
+    return {
+        "path": resolved,
+        "size": stat.st_size,
+        "mtime_ns": stat.st_mtime_ns,
+    }
+
+
+def _target_fingerprint(path: Path) -> dict[str, object]:
+    """Return staged target metadata for copy-manifest validation."""
+
+    stat = path.stat()
+    return {
+        "size": stat.st_size,
+        "mtime_ns": stat.st_mtime_ns,
+    }
 
 
 def _normalize_extension(ext: str) -> str:
