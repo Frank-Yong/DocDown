@@ -57,6 +57,82 @@ class WorkDir:
     # etc.
 ```
 
+### Artifact Class Diagram
+
+```mermaid
+classDiagram
+    class WorkDirError {
+        <<exception>>
+    }
+
+    class WorkDir {
+        +Path base
+        +Path input_dir
+        +Path chunks_dir
+        +Path extracted_dir
+        +Path markdown_dir
+        +Path tables_dir
+        +ensure_structure() None
+        +stage_input(source_pdf) Path
+        +artifact_path(artifact_type, chunk_number, ext, table_number) Path
+        +chunk_pdf(chunk_number) Path
+        +extracted(chunk_number, ext) Path
+        +markdown(chunk_number, ext) Path
+        +table_markdown(chunk_number, table_number, ext) Path
+        +merged_markdown() Path
+        +final_markdown() Path
+    }
+
+    class WorkdirModule {
+        <<module: docdown/workdir.py>>
+        +_copy_manifest_matches(source, target, manifest_path) bool
+        +_write_copy_manifest(manifest_path, source, target) None
+        +_read_manifest(manifest_path) dict?
+        +_delete_manifest_if_exists(manifest_path) None
+        +_normalize_extension(ext) str
+    }
+
+    class CliMain {
+        <<module: docdown/cli.py>>
+        +main(..., workdir) None
+    }
+
+    class SplitStage {
+        <<module: docdown/stages/split.py>>
+        +validate_pdf(input_pdf, password, logger) PdfValidationResult
+    }
+
+    class InputArtifacts {
+        <<workdir/input>>
+        +source.pdf
+        +source.manifest.json
+    }
+
+    class OutputArtifacts {
+        <<workdir outputs>>
+        +chunks/chunk-NNNN.pdf
+        +extracted/chunk-NNNN.xml
+        +markdown/chunk-NNNN.md
+        +tables/chunk-NNNN-table-NNN.md
+        +merged.md
+        +final.md
+        +run.log
+    }
+
+    class TestWorkDir {
+        <<tests/test_workdir.py>>
+        +structure/staging/path/error coverage
+    }
+
+    WorkdirModule --> WorkDir : defines
+    WorkdirModule ..> WorkDirError : raises
+    CliMain ..> WorkDir : initializes/stages input
+    SplitStage ..> WorkDir : consumes staged input layout
+    WorkDir --> InputArtifacts : manages
+    WorkDir --> OutputArtifacts : generates paths
+    TestWorkDir ..> WorkdirModule : verifies behavior
+```
+
 ## References
 
 - [technical-design.md §3 — Directory & File Layout](../technical-design.md)
