@@ -87,7 +87,19 @@ def _run_qpdf(command: list[str]) -> subprocess.CompletedProcess[str]:
     try:
         return subprocess.run(command, capture_output=True, text=True, check=False)
     except OSError as exc:
-        raise PdfValidationError(f"Failed to execute qpdf command {' '.join(command)}: {exc}") from exc
+        raise PdfValidationError(f"Failed to execute qpdf command {_redact_command(command)}: {exc}") from exc
+
+
+def _redact_command(command: list[str]) -> str:
+    """Render command text while redacting sensitive password arguments."""
+
+    redacted: list[str] = []
+    for part in command:
+        if part.startswith("--password="):
+            redacted.append("--password=***")
+        else:
+            redacted.append(part)
+    return " ".join(redacted)
 
 
 def _combined_output(result: subprocess.CompletedProcess[str]) -> str:

@@ -79,3 +79,20 @@ def test_validate_pdf_encrypted_without_password_aborts(tmp_path, monkeypatch):
 
 	with pytest.raises(PdfValidationError, match="requires a password"):
 		validate_pdf(input_pdf, password=None)
+
+
+def test_validate_pdf_redacts_password_in_qpdf_execution_error(tmp_path, monkeypatch):
+	input_pdf = tmp_path / "secret.pdf"
+	input_pdf.write_bytes(b"%PDF-1.4\n")
+
+	def _raise_oserror(command, capture_output, text, check):
+		raise OSError("qpdf not found")
+
+	monkeypatch.setattr("docdown.stages.split.subprocess.run", _raise_oserror)
+
+	with pytest.raises(PdfValidationError) as exc_info:
+		validate_pdf(input_pdf, password="top-secret")
+
+	error_text = str(exc_info.value)
+	assert "--password=***" in error_text
+	assert "top-secret" not in error_text
