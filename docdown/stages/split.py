@@ -31,7 +31,7 @@ def validate_pdf(input_pdf: Path, password: str | None = None, logger: logging.L
 
     active_logger = logger or get_logger()
     encrypted = _is_encrypted(input_path, password)
-    if encrypted and not password:
+    if encrypted and password is None:
         raise PdfValidationError(
             "Input PDF is encrypted and requires a password. "
             "Provide a PDF password before running DocDown."
@@ -77,7 +77,7 @@ def _is_encrypted(input_path: Path, password: str | None) -> bool:
 
 def _qpdf_command(flag: str, input_path: Path, *, password: str | None = None) -> list[str]:
     command = ["qpdf"]
-    if password:
+    if password is not None:
         command.append(f"--password={password}")
     command.extend([flag, str(input_path)])
     return command

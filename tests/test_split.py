@@ -80,6 +80,31 @@ def test_validate_pdf_encrypted_without_password_aborts(tmp_path, monkeypatch):
         validate_pdf(input_pdf, password=None)
 
 
+def test_validate_pdf_encrypted_with_empty_password_is_allowed(tmp_path, monkeypatch):
+    input_pdf = tmp_path / "secret.pdf"
+    input_pdf.write_bytes(b"%PDF-1.4\n")
+
+    responses = iter(
+        [
+            _cp(0, stdout="File is encrypted"),
+            _cp(0, stdout="checking passed"),
+            _cp(0, stdout="3\n"),
+        ]
+    )
+    seen_commands: list[list[str]] = []
+
+    def _fake_run(command, capture_output, text, check):
+        seen_commands.append(command)
+        return next(responses)
+
+    monkeypatch.setattr("docdown.stages.split.subprocess.run", _fake_run)
+
+    result = validate_pdf(input_pdf, password="")
+
+    assert result.page_count == 3
+    assert any(arg == "--password=" for cmd in seen_commands for arg in cmd)
+
+
 def test_validate_pdf_page_count_parse_failure_raises_clear_error(tmp_path, monkeypatch):
     input_pdf = tmp_path / "input.pdf"
     input_pdf.write_bytes(b"%PDF-1.4\n")
