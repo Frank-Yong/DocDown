@@ -10,13 +10,17 @@ Validate the input PDF and determine its total page count before splitting.
 
 ## Acceptance Criteria
 
-- [ ] Input file existence is verified; clear error if missing.
-- [ ] Input file is validated as a valid PDF (`qpdf --check`).
-- [ ] Corrupted PDFs produce a clear fatal error with the `qpdf` diagnostic output.
-- [ ] Encrypted PDFs are detected; if a password is not provided, abort with a message.
-- [ ] Total page count is extracted (`qpdf --show-npages`).
-- [ ] Page count and file size are logged at `INFO` level.
-- [ ] Unit tests cover: valid PDF, missing file, corrupted file, encrypted file.
+- [x] Input file existence is verified; clear error if missing.
+- [x] Input file is validated as a valid PDF (`qpdf --check`).
+- [x] Corrupted PDFs produce a clear fatal error with the `qpdf` diagnostic output.
+- [x] Encrypted PDFs are detected; if a password is not provided, abort with a message.
+- [x] Total page count is extracted (`qpdf --show-npages`).
+- [x] Page count and file size are logged at `INFO` level.
+- [x] Unit tests cover: valid PDF, missing file, corrupted file, encrypted file.
+
+Implemented in:
+- `docdown/stages/split.py`
+- `tests/test_split.py`
 
 ## Implementation Notes
 
