@@ -255,6 +255,29 @@ def test_split_pdf_rejects_invalid_chunk_size(tmp_path):
         split_pdf(input_pdf, tmp_path / "chunks", chunk_size=0, total_pages=10)
 
 
+def test_split_pdf_rejects_invalid_total_pages(tmp_path):
+    input_pdf = tmp_path / "input.pdf"
+    input_pdf.write_bytes(b"%PDF-1.4\n")
+
+    with pytest.raises(PdfSplitError, match="total_pages must be at least 1"):
+        split_pdf(input_pdf, tmp_path / "chunks", chunk_size=5, total_pages=0)
+
+
+def test_split_pdf_rejects_missing_input_file(tmp_path):
+    missing_pdf = tmp_path / "missing.pdf"
+
+    with pytest.raises(PdfSplitError, match="Input PDF not found"):
+        split_pdf(missing_pdf, tmp_path / "chunks", chunk_size=5, total_pages=10)
+
+
+def test_split_pdf_rejects_input_path_that_is_not_file(tmp_path):
+    input_dir = tmp_path / "input-dir"
+    input_dir.mkdir(parents=True, exist_ok=True)
+
+    with pytest.raises(PdfSplitError, match="Input PDF not found"):
+        split_pdf(input_dir, tmp_path / "chunks", chunk_size=5, total_pages=10)
+
+
 def test_split_pdf_ignores_stale_chunk_files_in_directory(tmp_path, monkeypatch):
     input_pdf = tmp_path / "input.pdf"
     chunks_dir = tmp_path / "chunks"
