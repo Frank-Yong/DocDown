@@ -93,11 +93,7 @@ def extract_grobid_chunk(
     if not chunk_path.exists() or not chunk_path.is_file():
         raise GrobidError(f"Chunk PDF not found: {chunk_path}")
 
-    active_logger: logging.Logger | ChunkAdapter
-    if chunk_number is not None:
-        active_logger = ChunkAdapter(logger, {"chunk": chunk_number}) if logger else get_chunk_logger(chunk_number)
-    else:
-        active_logger = logger or get_logger()
+    active_logger = _resolve_logger(logger, chunk_number)
 
     client = session or requests
     endpoint = f"{grobid_url.rstrip('/')}/api/processFulltextDocument"
@@ -180,11 +176,7 @@ def extract_pdfminer_chunk(
     chunk_path = Path(chunk_pdf)
     output_path = Path(output_text)
 
-    active_logger: logging.Logger | ChunkAdapter
-    if chunk_number is not None:
-        active_logger = ChunkAdapter(logger, {"chunk": chunk_number}) if logger else get_chunk_logger(chunk_number)
-    else:
-        active_logger = logger or get_logger()
+    active_logger = _resolve_logger(logger, chunk_number)
 
     if not chunk_path.exists() or not chunk_path.is_file():
         raise PdfMinerError(f"Chunk PDF not found: {chunk_path}")
@@ -237,3 +229,14 @@ def _body_excerpt(text: str, max_chars: int = _MAX_ERROR_BODY_EXCERPT) -> str:
         return "".join(normalized_chars)
 
     return "".join(normalized_chars[:max_chars]) + "..."
+
+
+def _resolve_logger(
+    logger: logging.Logger | None,
+    chunk_number: int | None,
+) -> logging.Logger | ChunkAdapter:
+    if chunk_number is None:
+        return logger or get_logger()
+    if logger is None:
+        return get_chunk_logger(chunk_number)
+    return ChunkAdapter(logger, {"chunk": chunk_number})
