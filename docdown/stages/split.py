@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-import math
 import os
 from pathlib import Path
 import subprocess
 import tempfile
 
 from docdown.utils.logging import get_logger, log_tool_command
+
+
+_MAX_FIXED_WIDTH_CHUNKS = 9999
 
 
 @dataclass(frozen=True)
@@ -98,10 +100,17 @@ def split_pdf(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     ranges = _compute_chunk_ranges(total_pages=total_pages, chunk_size=chunk_size)
+    expected_chunks = len(ranges)
+    if expected_chunks > _MAX_FIXED_WIDTH_CHUNKS:
+        raise PdfSplitError(
+            f"split would produce {expected_chunks} chunks, exceeding fixed 4-digit naming limit "
+            f"({_MAX_FIXED_WIDTH_CHUNKS})"
+        )
+
     chunk_paths: list[Path] = []
 
     for index, (start_page, end_page) in enumerate(ranges, start=1):
-        chunk_path = output_dir / _chunk_filename(index=index, total_chunks=len(ranges))
+        chunk_path = output_dir / _chunk_filename(index=index)
         split_result = _run_qpdf(
             _qpdf_split_command(input_path, start_page, end_page, chunk_path),
             password=password,
@@ -120,10 +129,13 @@ def split_pdf(
 
         chunk_paths.append(chunk_path)
 
-    expected_chunks = math.ceil(total_pages / chunk_size)
-    actual_chunks = len(list(output_dir.glob("chunk-*.pdf")))
-    if actual_chunks != expected_chunks:
-        raise PdfSplitError(f"Expected {expected_chunks} chunks, found {actual_chunks} in {output_dir}")
+    if len(chunk_paths) != expected_chunks:
+        raise PdfSplitError(f"Expected {expected_chunks} chunks, produced {len(chunk_paths)}")
+
+    missing_paths = [path for path in chunk_paths if not path.exists()]
+    if missing_paths:
+        missing_text = ", ".join(str(path) for path in missing_paths)
+        raise PdfSplitError(f"Missing expected chunk files: {missing_text}")
 
     active_logger.info("Split PDF into %s chunks in %s", expected_chunks, output_dir)
     return PdfSplitResult(chunk_count=expected_chunks, chunk_paths=chunk_paths)
@@ -240,8 +252,7 @@ def _compute_chunk_ranges(total_pages: int, chunk_size: int) -> list[tuple[int, 
     return ranges
 
 
-def _chunk_filename(index: int, total_chunks: int) -> str:
-    """Build chunk filename with at least 4 digits of zero padding."""
+def _chunk_filename(index: int) -> str:
+    """Build chunk filename using fixed 4-digit zero padding."""
 
-    width = max(4, len(str(total_chunks)))
-    return f"chunk-{index:0{width}d}.pdf"
+    return f"chunk-{index:04d}.pdf"

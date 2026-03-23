@@ -48,7 +48,7 @@ def split_pdf(input_path, chunks_dir, chunk_size, total_pages):
 
 - Single-page PDF → one chunk.
 - PDF with exactly `chunk_size` pages → one chunk.
-- Very large page counts (10,000+) → works as long as the resulting chunk count stays within the fixed-width naming scheme. The current 4-digit convention supports up to 9,999 chunks; if `num_chunks` can exceed that, derive the padding width from `num_chunks` instead of assuming 4 digits.
+- Very large page counts (10,000+) → fixed 4-digit naming is enforced. If split would exceed 9,999 chunks, the run aborts with a clear error.
 
 ### Artifact Class Diagram
 
@@ -67,7 +67,7 @@ classDiagram
         <<module: docdown/stages/split.py>>
         +split_pdf(input_pdf, chunks_dir, chunk_size, total_pages, password, logger) PdfSplitResult
         -_compute_chunk_ranges(total_pages, chunk_size) list~tuple~int,int~~
-        -_chunk_filename(index, total_chunks) str
+        -_chunk_filename(index) str
         -_qpdf_split_command(input_path, start_page, end_page, output_path) list~str~
         -_run_qpdf(command, password) CompletedProcess
         -_qpdf_command(flag, input_path) list~str~

@@ -253,3 +253,36 @@ def test_split_pdf_rejects_invalid_chunk_size(tmp_path):
 
     with pytest.raises(PdfSplitError, match="chunk_size must be at least 1"):
         split_pdf(input_pdf, tmp_path / "chunks", chunk_size=0, total_pages=10)
+
+
+def test_split_pdf_ignores_stale_chunk_files_in_directory(tmp_path, monkeypatch):
+    input_pdf = tmp_path / "input.pdf"
+    chunks_dir = tmp_path / "chunks"
+    input_pdf.write_bytes(b"%PDF-1.4\n")
+    chunks_dir.mkdir(parents=True, exist_ok=True)
+    stale_chunk = chunks_dir / "chunk-9999.pdf"
+    stale_chunk.write_bytes(b"stale")
+
+    def _fake_run(command, capture_output, text, check):
+        if "--pages" in command:
+            Path(command[-1]).write_bytes(b"%PDF-1.4 chunk\n")
+            return _cp(0, stdout="split ok")
+        if "--check" in command:
+            return _cp(0, stdout="check ok")
+        return _cp(0)
+
+    monkeypatch.setattr("docdown.stages.split.subprocess.run", _fake_run)
+
+    result = split_pdf(input_pdf, chunks_dir, chunk_size=2, total_pages=3)
+
+    assert result.chunk_count == 2
+    assert [path.name for path in result.chunk_paths] == ["chunk-0001.pdf", "chunk-0002.pdf"]
+    assert stale_chunk.exists()
+
+
+def test_split_pdf_rejects_chunk_counts_above_fixed_width_limit(tmp_path):
+    input_pdf = tmp_path / "input.pdf"
+    input_pdf.write_bytes(b"%PDF-1.4\n")
+
+    with pytest.raises(PdfSplitError, match="exceeding fixed 4-digit naming limit"):
+        split_pdf(input_pdf, tmp_path / "chunks", chunk_size=1, total_pages=10000)
