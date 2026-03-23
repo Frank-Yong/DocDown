@@ -1,4 +1,4 @@
-"""Stage 2 — Content extraction via GROBID."""
+"""Stage 2 — Content extraction via GROBID and pdfminer fallback."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 import time
 
+from pdfminer.high_level import extract_text as pdfminer_extract_text
 import requests
 
 from docdown.utils.logging import ChunkAdapter, get_chunk_logger, get_logger
@@ -21,6 +22,10 @@ _MAX_ERROR_BODY_EXCERPT = 300
 
 class GrobidError(ValueError):
     """Raised when GROBID health checks or extraction requests fail."""
+
+
+class PdfMinerError(ValueError):
+    """Raised when pdfminer fallback extraction fails."""
 
 
 def wait_for_grobid(
@@ -161,6 +166,47 @@ def extract_grobid_chunk(
         elapsed = time.monotonic() - started_at
         active_logger.info("GROBID extraction complete for %s in %.2fs", chunk_path.name, elapsed)
         return output_path
+
+
+def extract_pdfminer_chunk(
+    chunk_pdf: Path,
+    output_text: Path,
+    *,
+    logger: logging.Logger | None = None,
+    chunk_number: int | None = None,
+) -> Path:
+    """Extract plain text from a chunk PDF using pdfminer and write UTF-8 text output."""
+
+    chunk_path = Path(chunk_pdf)
+    output_path = Path(output_text)
+
+    active_logger: logging.Logger | ChunkAdapter
+    if chunk_number is not None:
+        active_logger = ChunkAdapter(logger, {"chunk": chunk_number}) if logger else get_chunk_logger(chunk_number)
+    else:
+        active_logger = logger or get_logger()
+
+    if not chunk_path.exists() or not chunk_path.is_file():
+        raise PdfMinerError(f"Chunk PDF not found: {chunk_path}")
+
+    started_at = time.monotonic()
+
+    try:
+        text = pdfminer_extract_text(str(chunk_path))
+    except Exception as exc:
+        active_logger.error("pdfminer extraction failed for %s: %s", chunk_path.name, exc)
+        raise PdfMinerError(f"pdfminer extraction failed for {chunk_path.name}: {exc}") from exc
+
+    if not text.strip():
+        active_logger.error("pdfminer produced empty output for %s", chunk_path.name)
+        raise PdfMinerError(f"pdfminer produced empty output for {chunk_path.name}")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(text, encoding="utf-8")
+
+    elapsed = time.monotonic() - started_at
+    active_logger.info("pdfminer extraction complete for %s in %.2fs", chunk_path.name, elapsed)
+    return output_path
 
 
 def _body_excerpt(text: str, max_chars: int = _MAX_ERROR_BODY_EXCERPT) -> str:

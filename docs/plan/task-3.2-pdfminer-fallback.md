@@ -11,13 +11,17 @@ Implement the fallback content extraction method using `pdfminer.six` for chunks
 
 ## Acceptance Criteria
 
-- [ ] Text is extracted from a chunk PDF using `pdfminer.six` `extract_text`.
-- [ ] Output is written to `workdir/extracted/chunk-NNNN.txt` (note: `.txt`, not `.xml`).
-- [ ] Output encoding is UTF-8.
-- [ ] Extraction that produces empty output is flagged as a failure.
-- [ ] Extraction errors (e.g., codec errors) are caught, logged, and reported as failure.
-- [ ] Extraction time per chunk is logged.
-- [ ] Unit tests cover: successful extraction, empty output, encoding errors.
+- [x] Text is extracted from a chunk PDF using `pdfminer.six` `extract_text`.
+- [x] Output is written to `workdir/extracted/chunk-NNNN.txt` (note: `.txt`, not `.xml`).
+- [x] Output encoding is UTF-8.
+- [x] Extraction that produces empty output is flagged as a failure.
+- [x] Extraction errors (e.g., codec errors) are caught, logged, and reported as failure.
+- [x] Extraction time per chunk is logged.
+- [x] Unit tests cover: successful extraction, empty output, encoding errors.
+
+Implemented in:
+- `docdown/stages/extract.py`
+- `tests/test_extract.py`
 
 ## Implementation Notes
 
@@ -40,6 +44,51 @@ def extract_pdfminer(chunk_path, output_path):
 - Images are ignored.
 
 These limitations mean downstream Pandoc conversion from pdfminer output produces lower-quality Markdown than from GROBID TEI XML.
+
+### Artifact Class Diagram
+
+```mermaid
+classDiagram
+    class PdfMinerError {
+        <<exception>>
+    }
+
+    class ExtractStageModule {
+        <<module: docdown/stages/extract.py>>
+        +extract_pdfminer_chunk(chunk_pdf, output_text, *, logger, chunk_number) Path
+    }
+
+    class LoggingModule {
+        <<module: docdown/utils/logging.py>>
+        +get_logger() Logger
+        +get_chunk_logger(chunk_number) ChunkAdapter
+        +ChunkAdapter
+    }
+
+    class PdfMinerLibrary {
+        <<external: pdfminer.six>>
+        +extract_text(path) str
+    }
+
+    class WorkDirArtifacts {
+        <<workdir artifacts>>
+        +chunks/chunk-NNNN.pdf
+        +extracted/chunk-NNNN.txt
+    }
+
+    class TestExtract {
+        <<tests/test_extract.py>>
+        +pdfminer success test
+        +empty output failure test
+        +extraction error wrapping test
+    }
+
+    ExtractStageModule ..> PdfMinerError : raises
+    ExtractStageModule ..> LoggingModule : uses logger adapters
+    ExtractStageModule ..> PdfMinerLibrary : extracts text
+    ExtractStageModule --> WorkDirArtifacts : reads PDF / writes UTF-8 text
+    TestExtract ..> ExtractStageModule : verifies behavior
+```
 
 ## References
 
