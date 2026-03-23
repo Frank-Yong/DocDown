@@ -194,7 +194,7 @@ def test_split_pdf_single_chunk_when_total_pages_below_chunk_size(tmp_path, monk
     result = split_pdf(input_pdf, chunks_dir, chunk_size=50, total_pages=1)
 
     assert result.chunk_count == 1
-    assert result.chunk_paths == [chunks_dir / "chunk-0001.pdf"]
+    assert result.chunk_paths == (chunks_dir / "chunk-0001.pdf",)
     assert (chunks_dir / "chunk-0001.pdf").exists()
 
 
@@ -221,11 +221,11 @@ def test_split_pdf_multi_chunk_ranges_and_naming(tmp_path, monkeypatch):
 
     assert result.chunk_count == 3
     assert page_ranges == ["1-3", "4-6", "7-8"]
-    assert result.chunk_paths == [
+    assert result.chunk_paths == (
         chunks_dir / "chunk-0001.pdf",
         chunks_dir / "chunk-0002.pdf",
         chunks_dir / "chunk-0003.pdf",
-    ]
+    )
 
 
 def test_split_pdf_raises_when_chunk_check_fails(tmp_path, monkeypatch):

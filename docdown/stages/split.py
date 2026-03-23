@@ -36,7 +36,7 @@ class PdfSplitResult:
     """Summary of produced chunk PDFs."""
 
     chunk_count: int
-    chunk_paths: list[Path]
+    chunk_paths: tuple[Path, ...]
 
 
 def validate_pdf(input_pdf: Path, password: str | None = None, logger: logging.Logger | None = None) -> PdfValidationResult:
@@ -150,7 +150,7 @@ def split_pdf(
         raise PdfSplitError(f"Missing expected chunk files: {missing_text}")
 
     active_logger.info("Split PDF into %s chunks in %s", expected_chunks, output_dir)
-    return PdfSplitResult(chunk_count=expected_chunks, chunk_paths=chunk_paths)
+    return PdfSplitResult(chunk_count=expected_chunks, chunk_paths=tuple(chunk_paths))
 
 
 def _is_encrypted(input_path: Path, password: str | None) -> bool:
