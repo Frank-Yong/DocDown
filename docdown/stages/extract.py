@@ -69,6 +69,13 @@ def extract_grobid_chunk(
 ) -> Path:
     """Submit a chunk PDF to GROBID and write TEI XML output."""
 
+    if timeout <= 0:
+        raise GrobidError(f"timeout must be > 0 seconds, got {timeout}")
+    if retries_on_503 < 0:
+        raise GrobidError(f"retries_on_503 must be >= 0, got {retries_on_503}")
+    if backoff_base_seconds < 0:
+        raise GrobidError(f"backoff_base_seconds must be >= 0, got {backoff_base_seconds}")
+
     chunk_path = Path(chunk_pdf)
     output_path = Path(output_xml)
     if not chunk_path.exists() or not chunk_path.is_file():

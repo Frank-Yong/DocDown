@@ -196,6 +196,33 @@ def test_extract_grobid_chunk_reports_nonrecoverable_http_error(tmp_path, monkey
         extract_grobid_chunk(chunk, output, "http://localhost:8070")
 
 
+def test_extract_grobid_chunk_rejects_non_positive_timeout(tmp_path):
+    chunk = tmp_path / "chunk-0001.pdf"
+    output = tmp_path / "chunk-0001.xml"
+    chunk.write_bytes(b"%PDF-1.4\n")
+
+    with pytest.raises(GrobidError, match="timeout must be > 0"):
+        extract_grobid_chunk(chunk, output, "http://localhost:8070", timeout=0)
+
+
+def test_extract_grobid_chunk_rejects_negative_503_retries(tmp_path):
+    chunk = tmp_path / "chunk-0001.pdf"
+    output = tmp_path / "chunk-0001.xml"
+    chunk.write_bytes(b"%PDF-1.4\n")
+
+    with pytest.raises(GrobidError, match="retries_on_503 must be >= 0"):
+        extract_grobid_chunk(chunk, output, "http://localhost:8070", retries_on_503=-1)
+
+
+def test_extract_grobid_chunk_rejects_negative_backoff_base_seconds(tmp_path):
+    chunk = tmp_path / "chunk-0001.pdf"
+    output = tmp_path / "chunk-0001.xml"
+    chunk.write_bytes(b"%PDF-1.4\n")
+
+    with pytest.raises(GrobidError, match="backoff_base_seconds must be >= 0"):
+        extract_grobid_chunk(chunk, output, "http://localhost:8070", backoff_base_seconds=-1)
+
+
 @pytest.mark.integration
 def test_extract_grobid_chunk_integration_real_service(tmp_path):
     if os.environ.get("RUN_GROBID_INTEGRATION") != "1":
