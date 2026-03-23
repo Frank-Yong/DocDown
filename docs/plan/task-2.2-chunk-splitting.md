@@ -65,7 +65,7 @@ classDiagram
 
     class SplitStageModule {
         <<module: docdown/stages/split.py>>
-        +split_pdf(input_pdf, chunks_dir, chunk_size, total_pages, password, logger) PdfSplitResult
+        +split_pdf(input_pdf, chunks_dir, chunk_size, total_pages, *, password, logger) PdfSplitResult
         -_compute_chunk_ranges(total_pages, chunk_size) list~tuple~int,int~~
         -_chunk_filename(index) str
         -_qpdf_split_command(input_path, start_page, end_page, output_path) list~str~
