@@ -278,6 +278,35 @@ def test_split_pdf_rejects_input_path_that_is_not_file(tmp_path):
         split_pdf(input_dir, tmp_path / "chunks", chunk_size=5, total_pages=10)
 
 
+def test_split_pdf_rejects_chunks_dir_that_is_existing_file(tmp_path):
+    input_pdf = tmp_path / "input.pdf"
+    input_pdf.write_bytes(b"%PDF-1.4\n")
+
+    chunks_file = tmp_path / "chunks"
+    chunks_file.write_text("not a directory", encoding="utf-8")
+
+    with pytest.raises(PdfSplitError, match="chunks_dir must be a directory"):
+        split_pdf(input_pdf, chunks_file, chunk_size=2, total_pages=2)
+
+
+def test_split_pdf_wraps_chunks_dir_mkdir_oserror(tmp_path, monkeypatch):
+    input_pdf = tmp_path / "input.pdf"
+    input_pdf.write_bytes(b"%PDF-1.4\n")
+
+    chunks_dir = tmp_path / "chunks"
+    original_mkdir = Path.mkdir
+
+    def _failing_mkdir(self, *args, **kwargs):
+        if self == chunks_dir:
+            raise PermissionError("permission denied")
+        return original_mkdir(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", _failing_mkdir)
+
+    with pytest.raises(PdfSplitError, match="Could not create chunks_dir"):
+        split_pdf(input_pdf, chunks_dir, chunk_size=2, total_pages=2)
+
+
 def test_split_pdf_ignores_stale_chunk_files_in_directory(tmp_path, monkeypatch):
     input_pdf = tmp_path / "input.pdf"
     chunks_dir = tmp_path / "chunks"

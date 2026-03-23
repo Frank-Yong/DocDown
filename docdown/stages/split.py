@@ -95,9 +95,14 @@ def split_pdf(
         raise PdfSplitError("total_pages must be at least 1")
     if not input_path.exists() or not input_path.is_file():
         raise PdfSplitError(f"Input PDF not found: {input_path}")
+    if output_dir.exists() and not output_dir.is_dir():
+        raise PdfSplitError(f"chunks_dir must be a directory: {output_dir}")
 
     active_logger = logger or get_logger()
-    output_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise PdfSplitError(f"Could not create chunks_dir {output_dir}: {exc}") from exc
 
     ranges = _compute_chunk_ranges(total_pages=total_pages, chunk_size=chunk_size)
     expected_chunks = len(ranges)
