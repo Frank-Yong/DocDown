@@ -1,4 +1,4 @@
-"""Tests for Stage 3.1 GROBID extraction."""
+"""Tests for Stage 2 content extraction via GROBID."""
 
 from __future__ import annotations
 
