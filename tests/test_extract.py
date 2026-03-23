@@ -120,6 +120,33 @@ def test_extract_grobid_chunk_503_uses_exponential_backoff(tmp_path, monkeypatch
 	assert sleeps == [5, 10, 20]
 
 
+def test_extract_grobid_chunk_timeout_then_503_starts_backoff_at_base(tmp_path, monkeypatch):
+	chunk = tmp_path / "chunk-0001.pdf"
+	output = tmp_path / "chunk-0001.xml"
+	chunk.write_bytes(b"%PDF-1.4\n")
+
+	seen_timeouts: list[int] = []
+	sleeps: list[int] = []
+	call_count = {"n": 0}
+
+	def _fake_post(url, files, timeout):
+		seen_timeouts.append(timeout)
+		call_count["n"] += 1
+		if call_count["n"] == 1:
+			raise requests.Timeout("first timeout")
+		if call_count["n"] == 2:
+			return _Resp(503, "busy")
+		return _Resp(200, "<TEI>ok</TEI>")
+
+	monkeypatch.setattr("docdown.stages.extract.requests.post", _fake_post)
+	monkeypatch.setattr("docdown.stages.extract.time.sleep", lambda s: sleeps.append(s))
+
+	extract_grobid_chunk(chunk, output, "http://localhost:8070", retries_on_503=3, backoff_base_seconds=5)
+
+	assert seen_timeouts == [120, 240, 240]
+	assert sleeps == [5]
+
+
 def test_extract_grobid_chunk_reports_nonrecoverable_http_error(tmp_path, monkeypatch):
 	chunk = tmp_path / "chunk-0001.pdf"
 	output = tmp_path / "chunk-0001.xml"
