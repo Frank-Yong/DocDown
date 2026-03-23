@@ -247,10 +247,10 @@ def test_extract_grobid_chunk_integration_real_service(tmp_path):
     chunk = tmp_path / "chunk-0001.pdf"
     output = tmp_path / "chunk-0001.xml"
 
-    doc = fitz.open()
-    page = doc.new_page()
-    page.insert_text((72, 72), "DocDown integration test")
-    doc.save(chunk)
+    with fitz.open() as doc:
+        page = doc.new_page()
+        page.insert_text((72, 72), "DocDown integration test")
+        doc.save(chunk)
 
     wait_for_grobid("http://localhost:8070", max_wait=60)
     result = extract_grobid_chunk(chunk, output, "http://localhost:8070", timeout=120)
