@@ -164,7 +164,30 @@ def extract_grobid_chunk(
 
 
 def _body_excerpt(text: str, max_chars: int = _MAX_ERROR_BODY_EXCERPT) -> str:
-    collapsed = " ".join(text.split())
-    if len(collapsed) <= max_chars:
-        return collapsed
-    return collapsed[:max_chars] + "..."
+    # Stream-normalize whitespace to avoid allocating all tokens for large bodies.
+    normalized_chars: list[str] = []
+    seen_non_whitespace = False
+    pending_space = False
+    exceeded_limit = False
+
+    for char in text:
+        if char.isspace():
+            if seen_non_whitespace:
+                pending_space = True
+            continue
+
+        if pending_space:
+            normalized_chars.append(" ")
+            pending_space = False
+
+        normalized_chars.append(char)
+        seen_non_whitespace = True
+
+        if len(normalized_chars) > max_chars:
+            exceeded_limit = True
+            break
+
+    if not exceeded_limit:
+        return "".join(normalized_chars)
+
+    return "".join(normalized_chars[:max_chars]) + "..."
