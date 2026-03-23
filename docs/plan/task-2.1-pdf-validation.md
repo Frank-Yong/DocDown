@@ -50,6 +50,84 @@ If no password is configured, abort. Do not attempt empty-password decryption by
 | 2              | Errors found       | Fatal abort     |
 | 3              | Warnings (usable)  | Log warning, continue |
 
+### Artifact Class Diagram
+
+```mermaid
+classDiagram
+	class PdfValidationResult {
+		+int page_count
+		+int file_size_bytes
+	}
+
+	class PdfValidationError {
+		<<exception>>
+	}
+
+	class SplitStageModule {
+		<<module: docdown/stages/split.py>>
+		+validate_pdf(input_pdf, password, logger) PdfValidationResult
+		-_is_encrypted(input_path, password) bool
+		-_qpdf_command(flag, input_path) list~str~
+		-_run_qpdf(command, password) CompletedProcess
+		-_inject_password(command, password) tuple~list~str~, Path?~
+		-_cleanup_password_file(password_file) None
+		-_redact_command(command) str
+		-_combined_output(result) str
+		-_parse_page_count(stdout) int
+	}
+
+	class CliMain {
+		<<module: docdown/cli.py>>
+		+main(...) None
+	}
+
+	class LoggingModule {
+		<<module: docdown/utils/logging.py>>
+		+get_logger() Logger
+		+log_tool_command(command, chunk_number) None
+	}
+
+	class WorkDir {
+		<<module: docdown/workdir.py>>
+		+stage_input(source_pdf) Path
+	}
+
+	class QpdfTool {
+		<<external: qpdf>>
+		+--show-encryption
+		+--check
+		+--show-npages
+		+--password-file=...
+	}
+
+	class PasswordTempFile {
+		<<temp file>>
+		+docdown-qpdf-*.pwd
+	}
+
+	class TestSplit {
+		<<tests/test_split.py>>
+		+valid/missing/corrupted/encrypted
+		+empty-password and parse-failure coverage
+		+password redaction/logging coverage
+	}
+
+	class TestCli {
+		<<tests/test_cli.py>>
+		+validation wiring and error surfacing
+	}
+
+	CliMain ..> WorkDir : stages input PDF
+	CliMain ..> SplitStageModule : calls validate_pdf
+	SplitStageModule --> PdfValidationResult : returns
+	SplitStageModule ..> PdfValidationError : raises
+	SplitStageModule ..> LoggingModule : logger + tool command logs
+	SplitStageModule ..> QpdfTool : executes commands
+	SplitStageModule ..> PasswordTempFile : creates/cleans when password provided
+	TestSplit ..> SplitStageModule : verifies behavior
+	TestCli ..> CliMain : verifies integration
+```
+
 ## References
 
 - [technical-design.md §5.1 — Stage 1: Split](../technical-design.md)
