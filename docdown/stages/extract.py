@@ -144,9 +144,6 @@ def extract_grobid_chunk(
         active_logger.info("GROBID extraction complete for %s in %.2fs", chunk_path.name, elapsed)
         return output_path
 
-    raise GrobidError(f"GROBID extraction failed for {chunk_path.name}")
-
-
 def _body_excerpt(text: str, max_chars: int = _MAX_ERROR_BODY_EXCERPT) -> str:
     collapsed = " ".join(text.split())
     if len(collapsed) <= max_chars:
