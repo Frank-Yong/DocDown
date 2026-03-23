@@ -79,7 +79,7 @@ def test_extract_grobid_chunk_timeout_retries_once_with_doubled_timeout(tmp_path
 
 	monkeypatch.setattr("docdown.stages.extract.requests.post", _fake_post)
 
-	extract_grobid_chunk(chunk, output, "http://localhost:8070", timeout=120)
+	extract_grobid_chunk(chunk, output, "http://localhost:8070", timeout=120, retries_on_503=0)
 	assert seen_timeouts == [120, 240]
 
 

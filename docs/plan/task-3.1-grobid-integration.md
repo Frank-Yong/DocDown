@@ -61,6 +61,61 @@ GROBID Docker management is **not** part of this task. The pipeline assumes GROB
 docker run -d --name grobid -p 8070:8070 lfoppiano/grobid:0.8.1
 ```
 
+### Artifact Class Diagram
+
+```mermaid
+classDiagram
+    class GrobidError {
+        <<exception>>
+    }
+
+    class ExtractStageModule {
+        <<module: docdown/stages/extract.py>>
+        +wait_for_grobid(grobid_url, *, max_wait, poll_interval, request_timeout, session, logger) None
+        +extract_grobid_chunk(chunk_pdf, output_xml, grobid_url, *, timeout, retries_on_503, backoff_base_seconds, session, logger, chunk_number) Path
+        -_body_excerpt(text, max_chars) str
+    }
+
+    class LoggingModule {
+        <<module: docdown/utils/logging.py>>
+        +get_logger() Logger
+        +get_chunk_logger(chunk_number) ChunkAdapter
+    }
+
+    class RequestsClient {
+        <<external: requests>>
+        +get(/api/isalive)
+        +post(/api/processFulltextDocument)
+    }
+
+    class GrobidService {
+        <<external service>>
+        +GET /api/isalive
+        +POST /api/processFulltextDocument
+    }
+
+    class WorkDirArtifacts {
+        <<workdir artifacts>>
+        +chunks/chunk-NNNN.pdf
+        +extracted/chunk-NNNN.xml
+    }
+
+    class TestExtract {
+        <<tests/test_extract.py>>
+        +health-check polling tests
+        +timeout + 503 retry/backoff tests
+        +HTTP error mapping tests
+        +integration test (opt-in)
+    }
+
+    ExtractStageModule ..> GrobidError : raises
+    ExtractStageModule ..> LoggingModule : uses logger adapters
+    ExtractStageModule ..> RequestsClient : HTTP calls
+    RequestsClient ..> GrobidService : invokes API
+    ExtractStageModule --> WorkDirArtifacts : reads chunk PDF / writes TEI XML
+    TestExtract ..> ExtractStageModule : verifies behavior
+```
+
 ## References
 
 - [technical-design.md §5.2.1 — GROBID Extraction](../technical-design.md)

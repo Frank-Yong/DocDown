@@ -84,13 +84,11 @@ def extract_grobid_chunk(
 	endpoint = f"{grobid_url.rstrip('/')}/api/processFulltextDocument"
 	started_at = time.monotonic()
 
-	attempt = 0
 	timeout_retry_used = False
-	max_attempts = retries_on_503 + 1
+	retries_503_used = 0
 
-	while attempt < max_attempts:
+	while True:
 		request_timeout = timeout * 2 if timeout_retry_used else timeout
-		attempt += 1
 
 		try:
 			with chunk_path.open("rb") as handle:
@@ -116,17 +114,17 @@ def extract_grobid_chunk(
 			raise GrobidError(f"GROBID request failed for {chunk_path.name}: {exc}") from exc
 
 		if response.status_code == 503:
-			if attempt <= retries_on_503:
-				delay = backoff_base_seconds * (2 ** (attempt - 1))
+			if retries_503_used < retries_on_503:
+				delay = backoff_base_seconds * (2 ** retries_503_used)
+				retries_503_used += 1
 				active_logger.warning(
-					"GROBID returned 503 for %s (attempt %s/%s); retrying in %ss",
+					"GROBID returned 503 for %s (retry %s/%s); retrying in %ss",
 					chunk_path.name,
-					attempt,
+					retries_503_used,
 					retries_on_503,
 					delay,
 				)
 				time.sleep(delay)
-				timeout_retry_used = True
 				continue
 
 			raise GrobidError(
