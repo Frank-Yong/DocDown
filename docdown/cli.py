@@ -3,6 +3,7 @@
 import click
 
 from docdown.config import ConfigError, load_config
+from docdown.stages.split import PdfValidationError, validate_pdf
 from docdown.utils.logging import configure_logging
 from docdown.workdir import WorkDir, WorkDirError
 
@@ -103,6 +104,13 @@ def main(
     logger.info(input_text)
     logger.info(workdir_text)
     logger.debug("Staged input at %s", staged_input)
+
+    try:
+        validation = validate_pdf(staged_input, logger=logger)
+    except PdfValidationError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    logger.info("PDF ready for splitting: pages=%s size_bytes=%s", validation.page_count, validation.file_size_bytes)
 
 
 def _version():
