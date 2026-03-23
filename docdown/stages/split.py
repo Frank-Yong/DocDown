@@ -12,6 +12,9 @@ import tempfile
 from docdown.utils.logging import get_logger, log_tool_command
 
 
+_MAX_FIXED_WIDTH_CHUNKS = 9999
+
+
 @dataclass(frozen=True)
 class PdfValidationResult:
     """Validation metadata extracted from qpdf before splitting."""
@@ -22,6 +25,18 @@ class PdfValidationResult:
 
 class PdfValidationError(ValueError):
     """Raised when input PDF cannot be validated for processing."""
+
+
+class PdfSplitError(ValueError):
+    """Raised when PDF splitting into chunk files fails."""
+
+
+@dataclass(frozen=True)
+class PdfSplitResult:
+    """Summary of produced chunk PDFs."""
+
+    chunk_count: int
+    chunk_paths: tuple[Path, ...]
 
 
 def validate_pdf(input_pdf: Path, password: str | None = None, logger: logging.Logger | None = None) -> PdfValidationResult:
@@ -61,6 +76,88 @@ def validate_pdf(input_pdf: Path, password: str | None = None, logger: logging.L
     return PdfValidationResult(page_count=page_count, file_size_bytes=file_size)
 
 
+def split_pdf(
+    input_pdf: Path,
+    chunks_dir: Path,
+    chunk_size: int,
+    total_pages: int,
+    *,
+    password: str | None = None,
+    logger: logging.Logger | None = None,
+) -> PdfSplitResult:
+    """Split input PDF into chunk PDFs and validate each chunk is readable."""
+
+    input_path = Path(input_pdf)
+    output_dir = Path(chunks_dir)
+    if chunk_size < 1:
+        raise PdfSplitError("chunk_size must be at least 1")
+    if total_pages < 1:
+        raise PdfSplitError("total_pages must be at least 1")
+    if not input_path.exists() or not input_path.is_file():
+        raise PdfSplitError(f"Input PDF not found: {input_path}")
+    if output_dir.exists() and not output_dir.is_dir():
+        raise PdfSplitError(f"chunks_dir must be a directory: {output_dir}")
+
+    active_logger = logger or get_logger()
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise PdfSplitError(f"Could not create chunks_dir {output_dir}: {exc}") from exc
+
+    ranges = _compute_chunk_ranges(total_pages=total_pages, chunk_size=chunk_size)
+    expected_chunks = len(ranges)
+    if expected_chunks > _MAX_FIXED_WIDTH_CHUNKS:
+        raise PdfSplitError(
+            f"split would produce {expected_chunks} chunks, exceeding fixed 4-digit naming limit "
+            f"({_MAX_FIXED_WIDTH_CHUNKS})"
+        )
+
+    chunk_paths: list[Path] = []
+
+    for index, (start_page, end_page) in enumerate(ranges, start=1):
+        chunk_path = output_dir / _chunk_filename(index=index)
+        try:
+            split_result = _run_qpdf(
+                _qpdf_split_command(input_path, start_page, end_page, chunk_path),
+                password=password,
+            )
+        except PdfValidationError as exc:
+            raise PdfSplitError(f"Failed to execute split command for {chunk_path.name}: {exc}") from exc
+        if split_result.returncode != 0:
+            raise PdfSplitError(
+                f"Failed to split pages {start_page}-{end_page} into {chunk_path.name}: "
+                f"{_combined_output(split_result)}"
+            )
+        if not chunk_path.exists() or not chunk_path.is_file():
+            raise PdfSplitError(f"Split command did not produce chunk file: {chunk_path}")
+
+        try:
+            check_result = _run_qpdf(_qpdf_command("--check", chunk_path), password=password)
+        except PdfValidationError as exc:
+            raise PdfSplitError(f"Failed to validate chunk {chunk_path.name}: {exc}") from exc
+        if check_result.returncode == 3:
+            active_logger.warning(
+                "qpdf reported warnings for %s: %s",
+                chunk_path.name,
+                _combined_output(check_result),
+            )
+        if check_result.returncode not in (0, 3):
+            raise PdfSplitError(f"Chunk {chunk_path.name} is unreadable: {_combined_output(check_result)}")
+
+        chunk_paths.append(chunk_path)
+
+    if len(chunk_paths) != expected_chunks:
+        raise PdfSplitError(f"Expected {expected_chunks} chunks, produced {len(chunk_paths)}")
+
+    missing_paths = [path for path in chunk_paths if not path.exists()]
+    if missing_paths:
+        missing_text = ", ".join(str(path) for path in missing_paths)
+        raise PdfSplitError(f"Missing expected chunk files: {missing_text}")
+
+    active_logger.info("Split PDF into %s chunks in %s", expected_chunks, output_dir)
+    return PdfSplitResult(chunk_count=expected_chunks, chunk_paths=tuple(chunk_paths))
+
+
 def _is_encrypted(input_path: Path, password: str | None) -> bool:
     result = _run_qpdf(_qpdf_command("--show-encryption", input_path), password=password)
     combined = _combined_output(result).lower()
@@ -79,6 +176,18 @@ def _is_encrypted(input_path: Path, password: str | None) -> bool:
 
 def _qpdf_command(flag: str, input_path: Path) -> list[str]:
     return ["qpdf", flag, str(input_path)]
+
+
+def _qpdf_split_command(input_path: Path, start_page: int, end_page: int, output_path: Path) -> list[str]:
+    return [
+        "qpdf",
+        str(input_path),
+        "--pages",
+        ".",
+        f"{start_page}-{end_page}",
+        "--",
+        str(output_path),
+    ]
 
 
 def _run_qpdf(command: list[str], *, password: str | None = None) -> subprocess.CompletedProcess[str]:
@@ -148,3 +257,19 @@ def _parse_page_count(stdout: str) -> int:
     if page_count < 1:
         raise PdfValidationError(f"qpdf reported invalid page count: {page_count}")
     return page_count
+
+
+def _compute_chunk_ranges(total_pages: int, chunk_size: int) -> list[tuple[int, int]]:
+    """Return inclusive page ranges for chunk extraction."""
+
+    ranges: list[tuple[int, int]] = []
+    for start in range(1, total_pages + 1, chunk_size):
+        end = min(start + chunk_size - 1, total_pages)
+        ranges.append((start, end))
+    return ranges
+
+
+def _chunk_filename(index: int) -> str:
+    """Build chunk filename using fixed 4-digit zero padding."""
+
+    return f"chunk-{index:04d}.pdf"
