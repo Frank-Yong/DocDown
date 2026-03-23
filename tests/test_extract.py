@@ -51,7 +51,13 @@ def test_wait_for_grobid_timeout_raises_clear_error(monkeypatch):
     def _fake_get(url, timeout):
         raise requests.ConnectionError("refused")
 
+    monotonic_values = iter([0.0, 0.0, 2.0])
+
+    def _fake_monotonic():
+        return next(monotonic_values, 2.0)
+
     monkeypatch.setattr("docdown.stages.extract.requests.get", _fake_get)
+    monkeypatch.setattr("docdown.stages.extract.time.monotonic", _fake_monotonic)
     monkeypatch.setattr("docdown.stages.extract.time.sleep", lambda *_: None)
 
     with pytest.raises(GrobidError, match="did not become ready"):
