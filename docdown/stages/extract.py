@@ -8,7 +8,7 @@ import time
 
 import requests
 
-from docdown.utils.logging import get_chunk_logger, get_logger
+from docdown.utils.logging import ChunkAdapter, get_chunk_logger, get_logger
 
 
 _DEFAULT_TIMEOUT_SECONDS = 120
@@ -74,8 +74,9 @@ def extract_grobid_chunk(
     if not chunk_path.exists() or not chunk_path.is_file():
         raise GrobidError(f"Chunk PDF not found: {chunk_path}")
 
+    active_logger: logging.Logger | ChunkAdapter
     if chunk_number is not None:
-        active_logger = get_chunk_logger(chunk_number)
+        active_logger = ChunkAdapter(logger, {"chunk": chunk_number}) if logger else get_chunk_logger(chunk_number)
     else:
         active_logger = logger or get_logger()
 
@@ -143,6 +144,7 @@ def extract_grobid_chunk(
         elapsed = time.monotonic() - started_at
         active_logger.info("GROBID extraction complete for %s in %.2fs", chunk_path.name, elapsed)
         return output_path
+
 
 def _body_excerpt(text: str, max_chars: int = _MAX_ERROR_BODY_EXCERPT) -> str:
     collapsed = " ".join(text.split())

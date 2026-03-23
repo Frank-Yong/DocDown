@@ -77,6 +77,35 @@ def test_extract_grobid_chunk_writes_xml_and_logs_time(tmp_path, monkeypatch, ca
     assert "GROBID extraction complete" in caplog.text
 
 
+def test_extract_grobid_chunk_uses_provided_logger_with_chunk_context(tmp_path, monkeypatch, caplog):
+    chunk = tmp_path / "chunk-0001.pdf"
+    output = tmp_path / "chunk-0001.xml"
+    chunk.write_bytes(b"%PDF-1.4\n")
+
+    def _fake_post(url, files, timeout):
+        return _Resp(200, "<TEI>ok</TEI>")
+
+    monkeypatch.setattr("docdown.stages.extract.requests.post", _fake_post)
+    custom_logger = logging.getLogger("tests.extract.custom")
+
+    with caplog.at_level(logging.INFO, logger="tests.extract.custom"):
+        extract_grobid_chunk(
+            chunk,
+            output,
+            "http://localhost:8070",
+            logger=custom_logger,
+            chunk_number=7,
+        )
+
+    matching = [
+        record
+        for record in caplog.records
+        if record.name == "tests.extract.custom" and "GROBID extraction complete" in record.getMessage()
+    ]
+    assert len(matching) == 1
+    assert getattr(matching[0], "chunk", None) == "chunk-0007"
+
+
 def test_extract_grobid_chunk_timeout_retries_once_with_doubled_timeout(tmp_path, monkeypatch):
     chunk = tmp_path / "chunk-0001.pdf"
     output = tmp_path / "chunk-0001.xml"
