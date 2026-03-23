@@ -111,10 +111,13 @@ def split_pdf(
 
     for index, (start_page, end_page) in enumerate(ranges, start=1):
         chunk_path = output_dir / _chunk_filename(index=index)
-        split_result = _run_qpdf(
-            _qpdf_split_command(input_path, start_page, end_page, chunk_path),
-            password=password,
-        )
+        try:
+            split_result = _run_qpdf(
+                _qpdf_split_command(input_path, start_page, end_page, chunk_path),
+                password=password,
+            )
+        except PdfValidationError as exc:
+            raise PdfSplitError(f"Failed to execute split command for {chunk_path.name}: {exc}") from exc
         if split_result.returncode != 0:
             raise PdfSplitError(
                 f"Failed to split pages {start_page}-{end_page} into {chunk_path.name}: "
@@ -123,7 +126,10 @@ def split_pdf(
         if not chunk_path.exists() or not chunk_path.is_file():
             raise PdfSplitError(f"Split command did not produce chunk file: {chunk_path}")
 
-        check_result = _run_qpdf(_qpdf_command("--check", chunk_path), password=password)
+        try:
+            check_result = _run_qpdf(_qpdf_command("--check", chunk_path), password=password)
+        except PdfValidationError as exc:
+            raise PdfSplitError(f"Failed to validate chunk {chunk_path.name}: {exc}") from exc
         if check_result.returncode not in (0, 3):
             raise PdfSplitError(f"Chunk {chunk_path.name} is unreadable: {_combined_output(check_result)}")
 

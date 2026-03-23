@@ -286,3 +286,16 @@ def test_split_pdf_rejects_chunk_counts_above_fixed_width_limit(tmp_path):
 
     with pytest.raises(PdfSplitError, match="exceeding fixed 4-digit naming limit"):
         split_pdf(input_pdf, tmp_path / "chunks", chunk_size=1, total_pages=10000)
+
+
+def test_split_pdf_wraps_qpdf_execution_errors_as_split_error(tmp_path, monkeypatch):
+    input_pdf = tmp_path / "input.pdf"
+    input_pdf.write_bytes(b"%PDF-1.4\n")
+
+    def _raise_oserror(command, capture_output, text, check):
+        raise OSError("qpdf not found")
+
+    monkeypatch.setattr("docdown.stages.split.subprocess.run", _raise_oserror)
+
+    with pytest.raises(PdfSplitError, match="Failed to execute split command"):
+        split_pdf(input_pdf, tmp_path / "chunks", chunk_size=2, total_pages=2)
