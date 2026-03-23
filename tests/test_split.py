@@ -299,3 +299,27 @@ def test_split_pdf_wraps_qpdf_execution_errors_as_split_error(tmp_path, monkeypa
 
     with pytest.raises(PdfSplitError, match="Failed to execute split command"):
         split_pdf(input_pdf, tmp_path / "chunks", chunk_size=2, total_pages=2)
+
+
+def test_split_pdf_logs_warning_when_chunk_check_returns_warning_code(tmp_path, monkeypatch, caplog):
+    input_pdf = tmp_path / "input.pdf"
+    chunks_dir = tmp_path / "chunks"
+    input_pdf.write_bytes(b"%PDF-1.4\n")
+
+    def _fake_run(command, capture_output, text, check):
+        if "--pages" in command:
+            Path(command[-1]).write_bytes(b"%PDF-1.4 chunk\n")
+            return _cp(0, stdout="split ok")
+        if "--check" in command:
+            return _cp(3, stdout="warnings present")
+        return _cp(0)
+
+    monkeypatch.setattr("docdown.stages.split.subprocess.run", _fake_run)
+    test_logger = logging.getLogger("tests.split")
+
+    with caplog.at_level(logging.WARNING, logger="tests.split"):
+        result = split_pdf(input_pdf, chunks_dir, chunk_size=2, total_pages=2, logger=test_logger)
+
+    assert result.chunk_count == 1
+    assert "qpdf reported warnings for chunk-0001.pdf" in caplog.text
+    assert "warnings present" in caplog.text

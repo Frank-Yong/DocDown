@@ -130,6 +130,12 @@ def split_pdf(
             check_result = _run_qpdf(_qpdf_command("--check", chunk_path), password=password)
         except PdfValidationError as exc:
             raise PdfSplitError(f"Failed to validate chunk {chunk_path.name}: {exc}") from exc
+        if check_result.returncode == 3:
+            active_logger.warning(
+                "qpdf reported warnings for %s: %s",
+                chunk_path.name,
+                _combined_output(check_result),
+            )
         if check_result.returncode not in (0, 3):
             raise PdfSplitError(f"Chunk {chunk_path.name} is unreadable: {_combined_output(check_result)}")
 
