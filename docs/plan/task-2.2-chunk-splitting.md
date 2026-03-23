@@ -56,7 +56,7 @@ def split_pdf(input_path, chunks_dir, chunk_size, total_pages):
 classDiagram
     class PdfSplitResult {
         +int chunk_count
-        +list~Path~ chunk_paths
+        +tuple~Path~ chunk_paths
     }
 
     class PdfSplitError {
