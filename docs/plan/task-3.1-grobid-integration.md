@@ -15,7 +15,7 @@ Implement the primary content extraction method using GROBID's REST API to conve
 - [x] Each chunk PDF is submitted to GROBID's `processFulltextDocument` endpoint.
 - [x] TEI XML response is written to `workdir/extracted/chunk-NNNN.xml`.
 - [x] Per-request timeout is configurable (default: 120 s).
-- [x] Timeout/503 errors trigger a single retry with 2× timeout (240 s).
+- [x] Timeout errors trigger a single retry with 2× timeout (240 s).
 - [x] Exponential backoff on 503: base 5 s, max 3 retries.
 - [x] Non-recoverable GROBID errors are reported with HTTP status and body excerpt.
 - [x] Extraction time per chunk is logged.
