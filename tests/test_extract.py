@@ -193,7 +193,7 @@ def test_extract_grobid_chunk_timeout_then_503_starts_backoff_at_base(tmp_path, 
 
     extract_grobid_chunk(chunk, output, "http://localhost:8070", retries_on_503=3, backoff_base_seconds=5)
 
-    assert seen_timeouts == [120, 240, 240]
+    assert seen_timeouts == [120, 240, 120]
     assert sleeps == [5]
 
 

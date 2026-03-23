@@ -99,10 +99,12 @@ def extract_grobid_chunk(
     started_at = time.monotonic()
 
     timeout_retry_used = False
+    timeout_retry_pending = False
     retries_503_used = 0
 
     while True:
-        request_timeout = timeout * 2 if timeout_retry_used else timeout
+        request_timeout = timeout * 2 if timeout_retry_pending else timeout
+        timeout_retry_pending = False
 
         try:
             with chunk_path.open("rb") as handle:
@@ -114,6 +116,7 @@ def extract_grobid_chunk(
         except requests.Timeout as exc:
             if not timeout_retry_used:
                 timeout_retry_used = True
+                timeout_retry_pending = True
                 active_logger.warning(
                     "GROBID timeout for %s at %ss; retrying once with %ss",
                     chunk_path.name,
@@ -122,7 +125,7 @@ def extract_grobid_chunk(
                 )
                 continue
             raise GrobidError(
-                f"GROBID timed out for {chunk_path.name} after retry (timeout {timeout * 2}s)."
+                f"GROBID timed out for {chunk_path.name} after retry (timeout {request_timeout}s)."
             ) from exc
         except requests.RequestException as exc:
             raise GrobidError(f"GROBID request failed for {chunk_path.name}: {exc}") from exc
