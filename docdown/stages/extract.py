@@ -43,7 +43,7 @@ def wait_for_grobid(
 	while time.monotonic() <= deadline:
 		try:
 			response = client.get(isalive_url, timeout=request_timeout)
-			if response.status_code == 200 and "true" in response.text.lower():
+			if response.status_code == 200 and response.text.strip().lower() == "true":
 				active_logger.info("GROBID service is available at %s", grobid_url)
 				return
 		except requests.RequestException:

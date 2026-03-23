@@ -33,6 +33,21 @@ def test_wait_for_grobid_becomes_ready(monkeypatch):
 	wait_for_grobid("http://localhost:8070", max_wait=5, poll_interval=1)
 
 
+def test_wait_for_grobid_does_not_accept_untrue(monkeypatch):
+	responses = iter([
+		_Resp(200, "untrue"),
+		_Resp(200, " true\n"),
+	])
+
+	def _fake_get(url, timeout):
+		return next(responses)
+
+	monkeypatch.setattr("docdown.stages.extract.requests.get", _fake_get)
+	monkeypatch.setattr("docdown.stages.extract.time.sleep", lambda *_: None)
+
+	wait_for_grobid("http://localhost:8070", max_wait=5, poll_interval=1)
+
+
 def test_wait_for_grobid_timeout_raises_clear_error(monkeypatch):
 	def _fake_get(url, timeout):
 		raise requests.ConnectionError("refused")
