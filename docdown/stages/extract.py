@@ -186,7 +186,7 @@ def extract_pdfminer_chunk(
     try:
         text = pdfminer_extract_text(str(chunk_path))
     except Exception as exc:
-        active_logger.error("pdfminer extraction failed for %s: %s", chunk_path.name, exc)
+        active_logger.exception("pdfminer extraction failed for %s", chunk_path.name)
         raise PdfMinerError(f"pdfminer extraction failed for {chunk_path.name}: {exc}") from exc
 
     if not text.strip():
