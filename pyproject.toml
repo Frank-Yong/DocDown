@@ -31,3 +31,6 @@ include = ["docdown*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: tests that require external services such as Dockerized GROBID",
+]
