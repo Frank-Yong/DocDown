@@ -64,6 +64,21 @@ def test_wait_for_grobid_timeout_raises_clear_error(monkeypatch):
         wait_for_grobid("http://localhost:8070", max_wait=1, poll_interval=1)
 
 
+def test_wait_for_grobid_rejects_negative_max_wait():
+    with pytest.raises(GrobidError, match="max_wait must be >= 0"):
+        wait_for_grobid("http://localhost:8070", max_wait=-1)
+
+
+def test_wait_for_grobid_rejects_non_positive_poll_interval():
+    with pytest.raises(GrobidError, match="poll_interval must be > 0"):
+        wait_for_grobid("http://localhost:8070", poll_interval=0)
+
+
+def test_wait_for_grobid_rejects_non_positive_request_timeout():
+    with pytest.raises(GrobidError, match="request_timeout must be > 0"):
+        wait_for_grobid("http://localhost:8070", request_timeout=0)
+
+
 def test_extract_grobid_chunk_writes_xml_and_logs_time(tmp_path, monkeypatch, caplog):
     chunk = tmp_path / "chunk-0001.pdf"
     output = tmp_path / "extracted" / "chunk-0001.xml"

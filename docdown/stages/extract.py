@@ -34,6 +34,13 @@ def wait_for_grobid(
 ) -> None:
     """Poll GROBID /api/isalive until ready or timeout."""
 
+    if max_wait < 0:
+        raise GrobidError(f"max_wait must be >= 0 seconds, got {max_wait}")
+    if poll_interval <= 0:
+        raise GrobidError(f"poll_interval must be > 0 seconds, got {poll_interval}")
+    if request_timeout <= 0:
+        raise GrobidError(f"request_timeout must be > 0 seconds, got {request_timeout}")
+
     active_logger = logger or get_logger()
     client = session or requests
     isalive_url = f"{grobid_url.rstrip('/')}/api/isalive"
