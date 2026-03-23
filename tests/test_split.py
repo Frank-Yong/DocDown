@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 import subprocess
 
 import pytest
 
-from docdown.stages.split import PdfValidationError, validate_pdf
+from docdown.stages.split import PdfSplitError, PdfValidationError, split_pdf, validate_pdf
 
 
 def _cp(returncode: int, stdout: str = "", stderr: str = "") -> subprocess.CompletedProcess[str]:
@@ -173,3 +174,82 @@ def test_validate_pdf_logs_redacted_qpdf_commands(tmp_path, monkeypatch):
     assert len(logged_commands) == 3
     assert all("--password-file=" in cmd or "--password=***" in cmd for cmd in logged_commands)
     assert all("super-secret" not in cmd for cmd in logged_commands)
+
+
+def test_split_pdf_single_chunk_when_total_pages_below_chunk_size(tmp_path, monkeypatch):
+    input_pdf = tmp_path / "input.pdf"
+    chunks_dir = tmp_path / "chunks"
+    input_pdf.write_bytes(b"%PDF-1.4\n")
+
+    def _fake_run(command, capture_output, text, check):
+        if "--pages" in command:
+            Path(command[-1]).write_bytes(b"%PDF-1.4 chunk\n")
+            return _cp(0, stdout="split ok")
+        if "--check" in command:
+            return _cp(0, stdout="check ok")
+        return _cp(0)
+
+    monkeypatch.setattr("docdown.stages.split.subprocess.run", _fake_run)
+
+    result = split_pdf(input_pdf, chunks_dir, chunk_size=50, total_pages=1)
+
+    assert result.chunk_count == 1
+    assert result.chunk_paths == [chunks_dir / "chunk-0001.pdf"]
+    assert (chunks_dir / "chunk-0001.pdf").exists()
+
+
+def test_split_pdf_multi_chunk_ranges_and_naming(tmp_path, monkeypatch):
+    input_pdf = tmp_path / "input.pdf"
+    chunks_dir = tmp_path / "chunks"
+    input_pdf.write_bytes(b"%PDF-1.4\n")
+
+    page_ranges: list[str] = []
+
+    def _fake_run(command, capture_output, text, check):
+        if "--pages" in command:
+            range_arg = command[command.index(".") + 1]
+            page_ranges.append(range_arg)
+            Path(command[-1]).write_bytes(b"%PDF-1.4 chunk\n")
+            return _cp(0, stdout="split ok")
+        if "--check" in command:
+            return _cp(0, stdout="check ok")
+        return _cp(0)
+
+    monkeypatch.setattr("docdown.stages.split.subprocess.run", _fake_run)
+
+    result = split_pdf(input_pdf, chunks_dir, chunk_size=3, total_pages=8)
+
+    assert result.chunk_count == 3
+    assert page_ranges == ["1-3", "4-6", "7-8"]
+    assert result.chunk_paths == [
+        chunks_dir / "chunk-0001.pdf",
+        chunks_dir / "chunk-0002.pdf",
+        chunks_dir / "chunk-0003.pdf",
+    ]
+
+
+def test_split_pdf_raises_when_chunk_check_fails(tmp_path, monkeypatch):
+    input_pdf = tmp_path / "input.pdf"
+    chunks_dir = tmp_path / "chunks"
+    input_pdf.write_bytes(b"%PDF-1.4\n")
+
+    def _fake_run(command, capture_output, text, check):
+        if "--pages" in command:
+            Path(command[-1]).write_bytes(b"%PDF-1.4 chunk\n")
+            return _cp(0, stdout="split ok")
+        if "--check" in command:
+            return _cp(2, stderr="chunk broken")
+        return _cp(0)
+
+    monkeypatch.setattr("docdown.stages.split.subprocess.run", _fake_run)
+
+    with pytest.raises(PdfSplitError, match="unreadable"):
+        split_pdf(input_pdf, chunks_dir, chunk_size=2, total_pages=2)
+
+
+def test_split_pdf_rejects_invalid_chunk_size(tmp_path):
+    input_pdf = tmp_path / "input.pdf"
+    input_pdf.write_bytes(b"%PDF-1.4\n")
+
+    with pytest.raises(PdfSplitError, match="chunk_size must be at least 1"):
+        split_pdf(input_pdf, tmp_path / "chunks", chunk_size=0, total_pages=10)
