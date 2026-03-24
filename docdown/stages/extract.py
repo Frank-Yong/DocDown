@@ -422,7 +422,10 @@ def _chunk_number_from_path(path: Path) -> int:
     match = _CHUNK_STEM_PATTERN.match(path.stem)
     if not match:
         raise ValueError(f"Chunk filename must match 'chunk-NNNN.pdf', got: {path.name}")
-    return int(match.group(1))
+    chunk_number = int(match.group(1))
+    if chunk_number < 1:
+        raise ValueError(f"Chunk filename must use chunk number >= 0001, got: {path.name}")
+    return chunk_number
 
 
 def _run_single_extractor(
