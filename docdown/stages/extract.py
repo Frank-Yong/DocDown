@@ -408,7 +408,7 @@ def _body_excerpt(text: str, max_chars: int = _MAX_ERROR_BODY_EXCERPT) -> str:
 def _resolve_logger(
     logger: LogLike | None,
     chunk_number: int | None,
-) -> LogLike | ChunkAdapter:
+) -> LogLike:
     if chunk_number is None:
         return logger or get_logger()
     if logger is None:
