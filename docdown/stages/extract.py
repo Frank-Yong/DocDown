@@ -420,6 +420,8 @@ def _validate_extractor_name(value: str, field_name: str) -> None:
 
 
 def _chunk_number_from_path(path: Path) -> int:
+    if path.suffix.lower() != ".pdf":
+        raise ValueError(f"Chunk filename must use .pdf extension, got: {path.name}")
     match = _CHUNK_STEM_PATTERN.match(path.stem)
     if not match:
         raise ValueError(f"Chunk filename must match 'chunk-NNNN.pdf', got: {path.name}")
