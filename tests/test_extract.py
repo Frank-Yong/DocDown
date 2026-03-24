@@ -263,6 +263,14 @@ def test_extract_pdfminer_chunk_writes_text_and_logs_time(tmp_path, monkeypatch,
     assert "pdfminer extraction complete" in caplog.text
 
 
+def test_extract_pdfminer_chunk_rejects_missing_chunk_file(tmp_path):
+    missing_chunk = tmp_path / "chunk-0001.pdf"
+    output = tmp_path / "chunk-0001.txt"
+
+    with pytest.raises(PdfMinerError, match=r"Chunk PDF not found: .*chunk-0001\.pdf"):
+        extract_pdfminer_chunk(missing_chunk, output)
+
+
 def test_extract_pdfminer_chunk_rejects_empty_output(tmp_path, monkeypatch):
     chunk = tmp_path / "chunk-0001.pdf"
     output = tmp_path / "chunk-0001.txt"
