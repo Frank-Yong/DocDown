@@ -470,6 +470,26 @@ def test_orchestrate_extraction_invalid_chunk_name_does_not_block_others(tmp_pat
     assert results[1] == ExtractionResult(2, True, ExtractorUsed.GROBID, out_dir / "chunk-0002.xml", None)
 
 
+def test_orchestrate_extraction_rejects_non_padded_chunk_number(tmp_path, monkeypatch):
+    chunks = [tmp_path / "chunk-1.pdf", tmp_path / "chunk-0002.pdf"]
+    out_dir = tmp_path / "extracted"
+
+    monkeypatch.setattr("docdown.stages.extract.wait_for_grobid", lambda *args, **kwargs: None)
+    monkeypatch.setattr("docdown.stages.extract.extract_grobid_chunk", lambda chunk, output, *args, **kwargs: output)
+
+    results = orchestrate_extraction(
+        chunks,
+        out_dir,
+        extractor="grobid",
+        fallback_extractor="pdfminer",
+    )
+
+    assert len(results) == 2
+    assert results[0].success is False
+    assert "chunk-NNNN.pdf" in (results[0].error or "")
+    assert results[1] == ExtractionResult(2, True, ExtractorUsed.GROBID, out_dir / "chunk-0002.xml", None)
+
+
 def test_extract_pdfminer_chunk_rejects_empty_output(tmp_path, monkeypatch):
     chunk = tmp_path / "chunk-0001.pdf"
     output = tmp_path / "chunk-0001.txt"
