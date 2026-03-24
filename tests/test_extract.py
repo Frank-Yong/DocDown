@@ -463,6 +463,7 @@ def test_orchestrate_extraction_invalid_chunk_name_does_not_block_others(tmp_pat
 
     assert len(results) == 2
     assert results[0].success is False
+    assert results[0].chunk_number == 0
     assert results[0].extractor is None
     assert results[0].output_path is None
     assert "Chunk filename must match" in (results[0].error or "")
@@ -486,6 +487,7 @@ def test_orchestrate_extraction_rejects_non_padded_chunk_number(tmp_path, monkey
 
     assert len(results) == 2
     assert results[0].success is False
+    assert results[0].chunk_number == 0
     assert "chunk-NNNN.pdf" in (results[0].error or "")
     assert results[1] == ExtractionResult(2, True, ExtractorUsed.GROBID, out_dir / "chunk-0002.xml", None)
 

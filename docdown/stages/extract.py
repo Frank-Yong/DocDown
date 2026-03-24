@@ -265,7 +265,7 @@ def orchestrate_extraction(
             active_logger.error("Invalid chunk filename for extraction: %s: %s", chunk.name, exc)
             results.append(
                 ExtractionResult(
-                    chunk_number=index,
+                    chunk_number=0,
                     success=False,
                     extractor=None,
                     output_path=None,
