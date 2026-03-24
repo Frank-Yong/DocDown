@@ -21,7 +21,6 @@ _DEFAULT_GROBID_POLL_INTERVAL_SECONDS = 2
 _DEFAULT_503_RETRIES = 3
 _DEFAULT_503_BACKOFF_BASE_SECONDS = 5
 _MAX_ERROR_BODY_EXCERPT = 300
-_VALID_EXTRACTORS = {"grobid", "pdfminer"}
 _CHUNK_STEM_PATTERN = re.compile(r"^chunk-(\d{4})$")
 
 LogLike = logging.Logger | logging.LoggerAdapter
@@ -38,6 +37,9 @@ class PdfMinerError(ValueError):
 class ExtractorUsed(str, Enum):
     GROBID = "grobid"
     PDFMINER = "pdfminer"
+
+
+_VALID_EXTRACTORS = {member.value for member in ExtractorUsed}
 
 
 @dataclass(frozen=True)
