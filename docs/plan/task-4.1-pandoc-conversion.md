@@ -12,7 +12,7 @@ Convert extracted intermediate files (TEI XML or plain text) into GitHub-Flavore
 
 - [x] TEI XML files (from GROBID) are converted to GFM Markdown via Pandoc.
 - [x] Plain text files (from pdfminer) are converted to GFM Markdown via Pandoc.
-- [x] Input format is selected based on file extension (`.xml` → TEI, `.txt` → plain).
+- [x] Input format is selected based on file extension (`.xml` → TEI, `.txt` → markdown-compatible plain text).
 - [x] `--wrap=none` is used to prevent hard line wrapping.
 - [x] Output is written to `workdir/markdown/chunk-NNNN.md`.
 - [x] Pandoc errors are caught and reported with stderr output.

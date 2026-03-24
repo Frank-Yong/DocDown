@@ -12,7 +12,8 @@ from docdown.utils.logging import get_logger, log_tool_command
 
 _FORMAT_BY_SUFFIX = {
 	".xml": "tei",
-	".txt": "plain",
+	# Pandoc does not support a generic "plain" input reader; treat raw text as markdown.
+	".txt": "markdown",
 }
 
 LogLike = logging.Logger | logging.LoggerAdapter

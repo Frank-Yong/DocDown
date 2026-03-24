@@ -74,7 +74,7 @@ def test_convert_to_markdown_uses_plain_for_txt_input(tmp_path, monkeypatch):
 
     convert_to_markdown(source, output)
     command = seen_commands[0]
-    assert "-f" in command and command[command.index("-f") + 1] == "plain"
+    assert "-f" in command and command[command.index("-f") + 1] == "markdown"
 
 
 def test_convert_to_markdown_rejects_unknown_extension(tmp_path):
