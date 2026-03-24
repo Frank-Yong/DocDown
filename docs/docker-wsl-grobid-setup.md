@@ -42,6 +42,47 @@ docker info
 
 If these commands return both Client and Server sections successfully, Docker is ready.
 
+## Troubleshooting
+
+### Error: `WSL2 is not supported ... HCS_E_HYPERV_NOT_INSTALLED`
+
+This means virtualization support is still missing at the host level.
+
+Run in an **Administrator PowerShell** window:
+
+```powershell
+dism /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+dism /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+dism /online /enable-feature /featurename:HypervisorPlatform /all /norestart
+bcdedit /set hypervisorlaunchtype auto
+```
+
+Then reboot and verify:
+
+```powershell
+wsl --status
+wsl -l -v
+docker version
+```
+
+If errors persist, enable CPU virtualization in BIOS/UEFI:
+
+- Intel: `VT-x` (and usually `VT-d`)
+- AMD: `SVM` / `AMD-V`
+
+### Error: `0x800f080c` for `Microsoft-Hyper-V-All`
+
+On many Windows Home systems this feature name is unavailable. This is expected.
+
+- Do **not** rely on `Microsoft-Hyper-V-All`.
+- Use `VirtualMachinePlatform`, `Microsoft-Windows-Subsystem-Linux`, and `HypervisorPlatform` instead (commands above).
+
+To see feature names available on your machine:
+
+```powershell
+dism /online /Get-Features /Format:Table | findstr /i "Hyper-V Hypervisor VirtualMachinePlatform Subsystem-Linux"
+```
+
 ## Start GROBID
 
 ```powershell
