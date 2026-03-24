@@ -252,9 +252,22 @@ def orchestrate_extraction(
 
     results: list[ExtractionResult] = []
 
-    for chunk_path in chunk_paths:
+    for index, chunk_path in enumerate(chunk_paths, start=1):
         chunk = Path(chunk_path)
-        chunk_number = _chunk_number_from_path(chunk)
+        try:
+            chunk_number = _chunk_number_from_path(chunk)
+        except ValueError as exc:
+            active_logger.error("Invalid chunk filename for extraction: %s: %s", chunk.name, exc)
+            results.append(
+                ExtractionResult(
+                    chunk_number=index,
+                    success=False,
+                    extractor=None,
+                    output_path=None,
+                    error=str(exc),
+                )
+            )
+            continue
 
         primary_extractor = extractor
         if primary_extractor == ExtractorUsed.GROBID.value and not grobid_available:
