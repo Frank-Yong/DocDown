@@ -238,12 +238,15 @@ def orchestrate_extraction(
     output_root = Path(extracted_dir)
     output_root.mkdir(parents=True, exist_ok=True)
 
+    grobid_required = extractor == ExtractorUsed.GROBID.value or fallback_extractor == ExtractorUsed.GROBID.value
     grobid_available = True
-    if extractor == ExtractorUsed.GROBID.value:
+    grobid_unavailable_reason: str | None = None
+    if grobid_required:
         try:
             wait_for_grobid(grobid_url, logger=active_logger)
         except GrobidError as exc:
             grobid_available = False
+            grobid_unavailable_reason = str(exc)
             active_logger.warning(
                 "GROBID unavailable; using fallback extractor '%s' for all chunks: %s",
                 fallback_extractor,
@@ -271,6 +274,19 @@ def orchestrate_extraction(
 
         primary_extractor = extractor
         if primary_extractor == ExtractorUsed.GROBID.value and not grobid_available:
+            if fallback_extractor == ExtractorUsed.GROBID.value:
+                error_text = f"GROBID unavailable and no non-GROBID extractor configured: {grobid_unavailable_reason}"
+                active_logger.error("Extractor '%s' failed for %s: %s", primary_extractor, chunk.name, error_text)
+                results.append(
+                    ExtractionResult(
+                        chunk_number=chunk_number,
+                        success=False,
+                        extractor=None,
+                        output_path=None,
+                        error=error_text,
+                    )
+                )
+                continue
             primary_extractor = fallback_extractor
 
         primary_result, primary_error = _run_single_extractor(
@@ -292,6 +308,19 @@ def orchestrate_extraction(
                 chunk.name,
                 primary_error,
             )
+            if fallback_extractor == ExtractorUsed.GROBID.value and not grobid_available:
+                error_text = f"GROBID unavailable for fallback extraction: {grobid_unavailable_reason}"
+                active_logger.error("Fallback extractor '%s' failed for %s: %s", fallback_extractor, chunk.name, error_text)
+                results.append(
+                    ExtractionResult(
+                        chunk_number=chunk_number,
+                        success=False,
+                        extractor=None,
+                        output_path=None,
+                        error=error_text,
+                    )
+                )
+                continue
             fallback_result, fallback_error = _run_single_extractor(
                 fallback_extractor,
                 chunk,

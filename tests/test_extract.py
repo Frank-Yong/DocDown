@@ -355,6 +355,70 @@ def test_orchestrate_extraction_when_grobid_down_skips_per_chunk_grobid(tmp_path
     assert all(result.success for result in results)
 
 
+def test_orchestrate_extraction_when_grobid_down_and_used_as_fallback_skips_calls(tmp_path, monkeypatch):
+    chunks = [tmp_path / "chunk-0001.pdf"]
+    out_dir = tmp_path / "extracted"
+
+    monkeypatch.setattr(
+        "docdown.stages.extract.wait_for_grobid",
+        lambda *args, **kwargs: (_ for _ in ()).throw(GrobidError("unreachable")),
+    )
+    monkeypatch.setattr(
+        "docdown.stages.extract.extract_pdfminer_chunk",
+        lambda *args, **kwargs: (_ for _ in ()).throw(PdfMinerError("primary failed")),
+    )
+
+    grobid_calls = {"count": 0}
+
+    def _never_called(*args, **kwargs):
+        grobid_calls["count"] += 1
+        raise AssertionError("extract_grobid_chunk should not be called when GROBID is down")
+
+    monkeypatch.setattr("docdown.stages.extract.extract_grobid_chunk", _never_called)
+
+    results = orchestrate_extraction(
+        chunks,
+        out_dir,
+        extractor="pdfminer",
+        fallback_extractor="grobid",
+    )
+
+    assert grobid_calls["count"] == 0
+    assert len(results) == 1
+    assert results[0].success is False
+    assert "GROBID unavailable for fallback extraction" in (results[0].error or "")
+
+
+def test_orchestrate_extraction_when_both_extractors_are_grobid_and_down_fails_without_calls(tmp_path, monkeypatch):
+    chunks = [tmp_path / "chunk-0001.pdf", tmp_path / "chunk-0002.pdf"]
+    out_dir = tmp_path / "extracted"
+
+    monkeypatch.setattr(
+        "docdown.stages.extract.wait_for_grobid",
+        lambda *args, **kwargs: (_ for _ in ()).throw(GrobidError("unreachable")),
+    )
+
+    grobid_calls = {"count": 0}
+
+    def _never_called(*args, **kwargs):
+        grobid_calls["count"] += 1
+        raise AssertionError("extract_grobid_chunk should not be called when GROBID is down")
+
+    monkeypatch.setattr("docdown.stages.extract.extract_grobid_chunk", _never_called)
+
+    results = orchestrate_extraction(
+        chunks,
+        out_dir,
+        extractor="grobid",
+        fallback_extractor="grobid",
+    )
+
+    assert grobid_calls["count"] == 0
+    assert len(results) == 2
+    assert all(not result.success for result in results)
+    assert all("no non-GROBID extractor configured" in (result.error or "") for result in results)
+
+
 def test_orchestrate_extraction_all_fail_returns_failed_results(tmp_path, monkeypatch):
     chunks = [tmp_path / "chunk-0001.pdf", tmp_path / "chunk-0002.pdf"]
     out_dir = tmp_path / "extracted"
