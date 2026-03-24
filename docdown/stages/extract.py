@@ -257,7 +257,7 @@ def orchestrate_extraction(
 
     results: list[ExtractionResult] = []
 
-    for index, chunk_path in enumerate(chunk_paths, start=1):
+    for chunk_path in chunk_paths:
         chunk = Path(chunk_path)
         try:
             chunk_number = _chunk_number_from_path(chunk)
