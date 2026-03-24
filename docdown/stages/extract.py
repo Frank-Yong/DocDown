@@ -475,5 +475,5 @@ def _run_single_extractor(
             ),
             None,
         )
-    except (GrobidError, PdfMinerError, ValueError) as exc:
+    except (GrobidError, PdfMinerError, ValueError, OSError, RuntimeError) as exc:
         return None, exc

@@ -447,6 +447,32 @@ def test_orchestrate_extraction_all_fail_returns_failed_results(tmp_path, monkey
     assert all(result.error == "pdfminer failed" for result in results)
 
 
+def test_orchestrate_extraction_continues_after_primary_oserror(tmp_path, monkeypatch):
+    chunks = [tmp_path / "chunk-0001.pdf", tmp_path / "chunk-0002.pdf"]
+    out_dir = tmp_path / "extracted"
+
+    monkeypatch.setattr("docdown.stages.extract.wait_for_grobid", lambda *args, **kwargs: None)
+
+    def _fake_grobid(chunk, output, grobid_url, **kwargs):
+        if chunk.name == "chunk-0001.pdf":
+            raise OSError("disk write failed")
+        return output
+
+    monkeypatch.setattr("docdown.stages.extract.extract_grobid_chunk", _fake_grobid)
+    monkeypatch.setattr("docdown.stages.extract.extract_pdfminer_chunk", lambda chunk, output, **kwargs: output)
+
+    results = orchestrate_extraction(
+        chunks,
+        out_dir,
+        extractor="grobid",
+        fallback_extractor="pdfminer",
+    )
+
+    assert len(results) == 2
+    assert results[0] == ExtractionResult(1, True, ExtractorUsed.PDFMINER, out_dir / "chunk-0001.txt", None)
+    assert results[1] == ExtractionResult(2, True, ExtractorUsed.GROBID, out_dir / "chunk-0002.xml", None)
+
+
 def test_orchestrate_extraction_invalid_chunk_name_does_not_block_others(tmp_path, monkeypatch):
     chunks = [tmp_path / "bad-name.pdf", tmp_path / "chunk-0002.pdf"]
     out_dir = tmp_path / "extracted"
