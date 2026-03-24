@@ -15,7 +15,7 @@ Implement the orchestration layer that runs the primary extractor, falls back wh
 - [x] Extractor choice is driven by config (`extractor`, `fallback_extractor`).
 - [x] Per-chunk result is tracked: `success (grobid)`, `success (pdfminer)`, or `failed`.
 - [x] Failed chunks do not block processing of other chunks.
-- [x] If GROBID is entirely unreachable, all chunks fall back to pdfminer without per-chunk retries.
+- [x] If GROBID is entirely unreachable, orchestration skips GROBID attempts and uses the configured fallback extractor without per-chunk GROBID retries (or records clear failures when fallback is also GROBID).
 - [x] Extraction results are returned as a list for downstream stages to consume.
 - [x] Summary logged: N succeeded (grobid), M succeeded (pdfminer), K failed.
 - [x] Unit tests cover: all-succeed, partial-failure, full-GROBID-down, all-fail scenarios.
