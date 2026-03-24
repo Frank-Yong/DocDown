@@ -1,21 +1,47 @@
 """Tests for the CLI entry point."""
 
+from pathlib import Path
 from types import SimpleNamespace
 
 from click.testing import CliRunner
 from docdown import __version__
 from docdown.cli import main
+from docdown.stages.convert import PandocError
+from docdown.stages.split import PdfSplitError
 from docdown.stages.split import PdfValidationError
 
 
 def test_cli_shows_version(tmp_path, monkeypatch):
     dummy_pdf = tmp_path / "test.pdf"
     dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+    extracted_path = tmp_path / "out" / "extracted" / "chunk-0001.xml"
 
     monkeypatch.setattr(
         "docdown.cli.validate_pdf",
         lambda *args, **kwargs: SimpleNamespace(page_count=1, file_size_bytes=dummy_pdf.stat().st_size),
     )
+    monkeypatch.setattr(
+        "docdown.cli.split_pdf",
+        lambda *args, **kwargs: SimpleNamespace(chunk_count=1, chunk_paths=(tmp_path / "out" / "chunks" / "chunk-0001.pdf",)),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.orchestrate_extraction",
+        lambda *args, **kwargs: [
+            SimpleNamespace(
+                chunk_number=1,
+                success=True,
+                output_path=extracted_path,
+            )
+        ],
+    )
+    monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
+
+    def _fake_convert(input_path, output_path, **kwargs):
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text("# ok", encoding="utf-8")
+        return Path(output_path)
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
@@ -51,11 +77,28 @@ def test_cli_rejects_file_path_for_workdir(tmp_path):
 def test_cli_accepts_log_level_flag(tmp_path, monkeypatch):
     dummy_pdf = tmp_path / "test.pdf"
     dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+    extracted_path = tmp_path / "out" / "extracted" / "chunk-0001.xml"
 
     monkeypatch.setattr(
         "docdown.cli.validate_pdf",
         lambda *args, **kwargs: SimpleNamespace(page_count=1, file_size_bytes=dummy_pdf.stat().st_size),
     )
+    monkeypatch.setattr(
+        "docdown.cli.split_pdf",
+        lambda *args, **kwargs: SimpleNamespace(chunk_count=1, chunk_paths=(tmp_path / "out" / "chunks" / "chunk-0001.pdf",)),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.orchestrate_extraction",
+        lambda *args, **kwargs: [
+            SimpleNamespace(
+                chunk_number=1,
+                success=True,
+                output_path=extracted_path,
+            )
+        ],
+    )
+    monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", lambda *args, **kwargs: tmp_path / "out" / "markdown" / "chunk-0001.md")
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out"), "--log-level", "debug"])
@@ -80,3 +123,79 @@ def test_cli_surfaces_pdf_validation_errors(tmp_path, monkeypatch):
 
     assert result.exit_code != 0
     assert "invalid pdf" in result.output
+
+
+def test_cli_surfaces_pdf_split_errors(tmp_path, monkeypatch):
+    dummy_pdf = tmp_path / "test.pdf"
+    dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+
+    monkeypatch.setattr(
+        "docdown.cli.validate_pdf",
+        lambda *args, **kwargs: SimpleNamespace(page_count=5, file_size_bytes=dummy_pdf.stat().st_size),
+    )
+
+    def _raise_split_error(*args, **kwargs):
+        raise PdfSplitError("split failed")
+
+    monkeypatch.setattr("docdown.cli.split_pdf", _raise_split_error)
+
+    runner = CliRunner()
+    result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
+
+    assert result.exit_code != 0
+    assert "split failed" in result.output
+
+
+def test_cli_fails_when_all_extractions_fail(tmp_path, monkeypatch):
+    dummy_pdf = tmp_path / "test.pdf"
+    dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+
+    monkeypatch.setattr(
+        "docdown.cli.validate_pdf",
+        lambda *args, **kwargs: SimpleNamespace(page_count=1, file_size_bytes=dummy_pdf.stat().st_size),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.split_pdf",
+        lambda *args, **kwargs: SimpleNamespace(chunk_count=1, chunk_paths=(tmp_path / "out" / "chunks" / "chunk-0001.pdf",)),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.orchestrate_extraction",
+        lambda *args, **kwargs: [SimpleNamespace(chunk_number=1, success=False, output_path=None)],
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
+
+    assert result.exit_code != 0
+    assert "Extraction failed for all chunks" in result.output
+
+
+def test_cli_fails_when_all_conversions_fail(tmp_path, monkeypatch):
+    dummy_pdf = tmp_path / "test.pdf"
+    dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+    extracted_path = tmp_path / "out" / "extracted" / "chunk-0001.xml"
+
+    monkeypatch.setattr(
+        "docdown.cli.validate_pdf",
+        lambda *args, **kwargs: SimpleNamespace(page_count=1, file_size_bytes=dummy_pdf.stat().st_size),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.split_pdf",
+        lambda *args, **kwargs: SimpleNamespace(chunk_count=1, chunk_paths=(tmp_path / "out" / "chunks" / "chunk-0001.pdf",)),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.orchestrate_extraction",
+        lambda *args, **kwargs: [SimpleNamespace(chunk_number=1, success=True, output_path=extracted_path)],
+    )
+    monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
+
+    def _raise_pandoc_error(*args, **kwargs):
+        raise PandocError("pandoc broke")
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _raise_pandoc_error)
+
+    runner = CliRunner()
+    result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
+
+    assert result.exit_code != 0
+    assert "Pandoc conversion failed for all extracted chunks" in result.output

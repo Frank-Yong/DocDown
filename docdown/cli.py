@@ -3,7 +3,9 @@
 import click
 
 from docdown.config import ConfigError, load_config
-from docdown.stages.split import PdfValidationError, validate_pdf
+from docdown.stages.convert import PandocError, convert_to_markdown, ensure_pandoc_available
+from docdown.stages.extract import orchestrate_extraction
+from docdown.stages.split import PdfSplitError, PdfValidationError, split_pdf, validate_pdf
 from docdown.utils.logging import configure_logging
 from docdown.workdir import WorkDir, WorkDirError
 
@@ -111,6 +113,59 @@ def main(
         raise click.ClickException(str(exc)) from exc
 
     logger.info("PDF ready for splitting: pages=%s size_bytes=%s", validation.page_count, validation.file_size_bytes)
+
+    try:
+        split_result = split_pdf(
+            staged_input,
+            work_dir.chunks_dir,
+            cfg.chunk_size,
+            validation.page_count,
+            logger=logger,
+        )
+    except PdfSplitError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    logger.info("Split complete: %s chunks", split_result.chunk_count)
+
+    extraction_results = orchestrate_extraction(
+        split_result.chunk_paths,
+        work_dir.extracted_dir,
+        extractor=cfg.extractor,
+        fallback_extractor=cfg.fallback_extractor,
+        grobid_url=cfg.grobid_url,
+        logger=logger,
+    )
+
+    successful_extractions = [
+        result for result in extraction_results if result.success and result.output_path is not None
+    ]
+    if not successful_extractions:
+        raise click.ClickException("Extraction failed for all chunks; no conversion input available.")
+
+    try:
+        ensure_pandoc_available(logger=logger)
+    except PandocError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    converted_chunks = 0
+    for result in successful_extractions:
+        markdown_path = work_dir.markdown(result.chunk_number)
+        try:
+            convert_to_markdown(
+                result.output_path,
+                markdown_path,
+                logger=logger,
+                chunk_number=result.chunk_number,
+            )
+        except PandocError as exc:
+            logger.error("Pandoc conversion failed for chunk-%04d: %s", result.chunk_number, exc)
+            continue
+        converted_chunks += 1
+
+    if converted_chunks == 0:
+        raise click.ClickException("Pandoc conversion failed for all extracted chunks.")
+
+    logger.info("Conversion summary: %s converted, %s extraction successes skipped/failed", converted_chunks, len(successful_extractions) - converted_chunks)
 
 
 def _version():
