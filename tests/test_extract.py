@@ -1,4 +1,4 @@
-"""Tests for Stage 2 content extraction via GROBID."""
+"""Tests for Stage 2 content extraction via GROBID and pdfminer fallback."""
 
 from __future__ import annotations
 
@@ -8,7 +8,13 @@ import os
 import pytest
 import requests
 
-from docdown.stages.extract import GrobidError, extract_grobid_chunk, wait_for_grobid
+from docdown.stages.extract import (
+    GrobidError,
+    PdfMinerError,
+    extract_grobid_chunk,
+    extract_pdfminer_chunk,
+    wait_for_grobid,
+)
 
 
 class _Resp:
@@ -236,6 +242,58 @@ def test_extract_grobid_chunk_rejects_negative_backoff_base_seconds(tmp_path):
 
     with pytest.raises(GrobidError, match="backoff_base_seconds must be >= 0"):
         extract_grobid_chunk(chunk, output, "http://localhost:8070", backoff_base_seconds=-1)
+
+
+def test_extract_pdfminer_chunk_writes_text_and_logs_time(tmp_path, monkeypatch, caplog):
+    chunk = tmp_path / "chunk-0001.pdf"
+    output = tmp_path / "extracted" / "chunk-0001.txt"
+    chunk.write_bytes(b"%PDF-1.4\n")
+
+    monkeypatch.setattr(
+        "docdown.stages.extract.pdfminer_extract_text",
+        lambda path: "line 1\nline 2\n",
+    )
+    test_logger = logging.getLogger("tests.extract.pdfminer")
+
+    with caplog.at_level(logging.INFO, logger="tests.extract.pdfminer"):
+        result = extract_pdfminer_chunk(chunk, output, logger=test_logger)
+
+    assert result == output
+    assert output.read_text(encoding="utf-8") == "line 1\nline 2\n"
+    assert "pdfminer extraction complete" in caplog.text
+
+
+def test_extract_pdfminer_chunk_rejects_missing_chunk_file(tmp_path):
+    missing_chunk = tmp_path / "chunk-0001.pdf"
+    output = tmp_path / "chunk-0001.txt"
+
+    with pytest.raises(PdfMinerError, match=r"Chunk PDF not found: .*chunk-0001\.pdf"):
+        extract_pdfminer_chunk(missing_chunk, output)
+
+
+def test_extract_pdfminer_chunk_rejects_empty_output(tmp_path, monkeypatch):
+    chunk = tmp_path / "chunk-0001.pdf"
+    output = tmp_path / "chunk-0001.txt"
+    chunk.write_bytes(b"%PDF-1.4\n")
+
+    monkeypatch.setattr("docdown.stages.extract.pdfminer_extract_text", lambda path: "   \n\t")
+
+    with pytest.raises(PdfMinerError, match="produced empty output"):
+        extract_pdfminer_chunk(chunk, output)
+
+
+def test_extract_pdfminer_chunk_wraps_extraction_errors(tmp_path, monkeypatch):
+    chunk = tmp_path / "chunk-0001.pdf"
+    output = tmp_path / "chunk-0001.txt"
+    chunk.write_bytes(b"%PDF-1.4\n")
+
+    def _raise_error(_path):
+        raise UnicodeError("codec boom")
+
+    monkeypatch.setattr("docdown.stages.extract.pdfminer_extract_text", _raise_error)
+
+    with pytest.raises(PdfMinerError, match="pdfminer extraction failed"):
+        extract_pdfminer_chunk(chunk, output)
 
 
 @pytest.mark.integration
