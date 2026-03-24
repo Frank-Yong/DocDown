@@ -24,6 +24,8 @@ _MAX_ERROR_BODY_EXCERPT = 300
 _VALID_EXTRACTORS = {"grobid", "pdfminer"}
 _CHUNK_STEM_PATTERN = re.compile(r"^chunk-(\d+)$")
 
+LogLike = logging.Logger | logging.LoggerAdapter
+
 
 class GrobidError(ValueError):
     """Raised when GROBID health checks or extraction requests fail."""
@@ -54,7 +56,7 @@ def wait_for_grobid(
     poll_interval: int = _DEFAULT_GROBID_POLL_INTERVAL_SECONDS,
     request_timeout: int = 5,
     session: requests.Session | None = None,
-    logger: logging.Logger | None = None,
+    logger: LogLike | None = None,
 ) -> None:
     """Poll GROBID /api/isalive until ready or timeout."""
 
@@ -95,7 +97,7 @@ def extract_grobid_chunk(
     retries_on_503: int = _DEFAULT_503_RETRIES,
     backoff_base_seconds: int = _DEFAULT_503_BACKOFF_BASE_SECONDS,
     session: requests.Session | None = None,
-    logger: logging.Logger | None = None,
+    logger: LogLike | None = None,
     chunk_number: int | None = None,
 ) -> Path:
     """Submit a chunk PDF to GROBID and write TEI XML output."""
@@ -187,7 +189,7 @@ def extract_pdfminer_chunk(
     chunk_pdf: Path,
     output_text: Path,
     *,
-    logger: logging.Logger | None = None,
+    logger: LogLike | None = None,
     chunk_number: int | None = None,
 ) -> Path:
     """Extract plain text from a chunk PDF using pdfminer and write UTF-8 text output."""
@@ -227,7 +229,7 @@ def orchestrate_extraction(
     extractor: str = ExtractorUsed.GROBID.value,
     fallback_extractor: str = ExtractorUsed.PDFMINER.value,
     grobid_url: str = "http://localhost:8070",
-    logger: logging.Logger | None = None,
+    logger: LogLike | None = None,
 ) -> list[ExtractionResult]:
     """Run extraction for each chunk with fallback and per-chunk result tracking."""
 
@@ -401,9 +403,9 @@ def _body_excerpt(text: str, max_chars: int = _MAX_ERROR_BODY_EXCERPT) -> str:
 
 
 def _resolve_logger(
-    logger: logging.Logger | None,
+    logger: LogLike | None,
     chunk_number: int | None,
-) -> logging.Logger | ChunkAdapter:
+) -> LogLike | ChunkAdapter:
     if chunk_number is None:
         return logger or get_logger()
     if logger is None:
@@ -429,7 +431,7 @@ def _run_single_extractor(
     extracted_dir: Path,
     chunk_number: int,
     grobid_url: str,
-    logger: logging.Logger,
+    logger: LogLike,
 ) -> tuple[ExtractionResult | None, Exception | None]:
     try:
         if extractor_name == ExtractorUsed.GROBID.value:
