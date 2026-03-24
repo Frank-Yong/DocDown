@@ -11,14 +11,18 @@ Implement the orchestration layer that runs the primary extractor, falls back wh
 
 ## Acceptance Criteria
 
-- [ ] For each chunk: try primary extractor → on failure, try fallback → on failure, mark as failed.
-- [ ] Extractor choice is driven by config (`extractor`, `fallback_extractor`).
-- [ ] Per-chunk result is tracked: `success (grobid)`, `success (pdfminer)`, or `failed`.
-- [ ] Failed chunks do not block processing of other chunks.
-- [ ] If GROBID is entirely unreachable, all chunks fall back to pdfminer without per-chunk retries.
-- [ ] Extraction results are returned as a list for downstream stages to consume.
-- [ ] Summary logged: N succeeded (grobid), M succeeded (pdfminer), K failed.
-- [ ] Unit tests cover: all-succeed, partial-failure, full-GROBID-down, all-fail scenarios.
+- [x] For each chunk: try primary extractor → on failure, try fallback → on failure, mark as failed.
+- [x] Extractor choice is driven by config (`extractor`, `fallback_extractor`).
+- [x] Per-chunk result is tracked: `success (grobid)`, `success (pdfminer)`, or `failed`.
+- [x] Failed chunks do not block processing of other chunks.
+- [x] If GROBID is entirely unreachable, all chunks fall back to pdfminer without per-chunk retries.
+- [x] Extraction results are returned as a list for downstream stages to consume.
+- [x] Summary logged: N succeeded (grobid), M succeeded (pdfminer), K failed.
+- [x] Unit tests cover: all-succeed, partial-failure, full-GROBID-down, all-fail scenarios.
+
+Implemented in:
+- `docdown/stages/extract.py`
+- `tests/test_extract.py`
 
 ## Implementation Notes
 
@@ -60,6 +64,54 @@ def extract_chunk(chunk_path, chunk_num, config, workdir):
     except ExtractionError as e:
         log.error(f"[chunk-{chunk_num:04d}] Fallback extractor failed: {e}")
         return ExtractionResult(chunk_num, False, None, None, str(e))
+```
+
+### Artifact Class Diagram
+
+```mermaid
+classDiagram
+    class ExtractorUsed {
+        <<enum>>
+        GROBID
+        PDFMINER
+    }
+
+    class ExtractionResult {
+        +chunk_number: int
+        +success: bool
+        +extractor: ExtractorUsed|None
+        +output_path: Path|None
+        +error: str|None
+    }
+
+    class ExtractStageModule {
+        <<module: docdown/stages/extract.py>>
+        +orchestrate_extraction(chunk_paths, extracted_dir, *, extractor, fallback_extractor, grobid_url, logger) list~ExtractionResult~
+        -_run_single_extractor(extractor_name, chunk_path, extracted_dir, chunk_number, grobid_url, logger)
+    }
+
+    class GrobidExtractor {
+        +wait_for_grobid(...)
+        +extract_grobid_chunk(...)
+    }
+
+    class PdfMinerExtractor {
+        +extract_pdfminer_chunk(...)
+    }
+
+    class TestExtract {
+        <<tests/test_extract.py>>
+        +all-succeed orchestration test
+        +partial-fallback test
+        +full-GROBID-down test
+        +all-fail test
+    }
+
+    ExtractStageModule --> ExtractionResult : returns
+    ExtractionResult --> ExtractorUsed : uses
+    ExtractStageModule ..> GrobidExtractor : primary/fallback invocation
+    ExtractStageModule ..> PdfMinerExtractor : primary/fallback invocation
+    TestExtract ..> ExtractStageModule : verifies orchestration behavior
 ```
 
 ## References

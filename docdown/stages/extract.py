@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from enum import Enum
 import logging
 from pathlib import Path
+import re
 import time
 
 from pdfminer.high_level import extract_text as pdfminer_extract_text
@@ -18,6 +21,8 @@ _DEFAULT_GROBID_POLL_INTERVAL_SECONDS = 2
 _DEFAULT_503_RETRIES = 3
 _DEFAULT_503_BACKOFF_BASE_SECONDS = 5
 _MAX_ERROR_BODY_EXCERPT = 300
+_VALID_EXTRACTORS = {"grobid", "pdfminer"}
+_CHUNK_STEM_PATTERN = re.compile(r"^chunk-(\d+)$")
 
 
 class GrobidError(ValueError):
@@ -26,6 +31,20 @@ class GrobidError(ValueError):
 
 class PdfMinerError(ValueError):
     """Raised when pdfminer fallback extraction fails."""
+
+
+class ExtractorUsed(str, Enum):
+    GROBID = "grobid"
+    PDFMINER = "pdfminer"
+
+
+@dataclass(frozen=True)
+class ExtractionResult:
+    chunk_number: int
+    success: bool
+    extractor: ExtractorUsed | None
+    output_path: Path | None
+    error: str | None
 
 
 def wait_for_grobid(
@@ -201,6 +220,114 @@ def extract_pdfminer_chunk(
     return output_path
 
 
+def orchestrate_extraction(
+    chunk_paths: list[Path] | tuple[Path, ...],
+    extracted_dir: Path,
+    *,
+    extractor: str = ExtractorUsed.GROBID.value,
+    fallback_extractor: str = ExtractorUsed.PDFMINER.value,
+    grobid_url: str = "http://localhost:8070",
+    logger: logging.Logger | None = None,
+) -> list[ExtractionResult]:
+    """Run extraction for each chunk with fallback and per-chunk result tracking."""
+
+    _validate_extractor_name(extractor, "extractor")
+    _validate_extractor_name(fallback_extractor, "fallback_extractor")
+
+    active_logger = logger or get_logger()
+    output_root = Path(extracted_dir)
+    output_root.mkdir(parents=True, exist_ok=True)
+
+    grobid_available = True
+    if extractor == ExtractorUsed.GROBID.value:
+        try:
+            wait_for_grobid(grobid_url, logger=active_logger)
+        except GrobidError as exc:
+            grobid_available = False
+            active_logger.warning(
+                "GROBID unavailable; using fallback extractor '%s' for all chunks: %s",
+                fallback_extractor,
+                exc,
+            )
+
+    results: list[ExtractionResult] = []
+
+    for chunk_path in chunk_paths:
+        chunk = Path(chunk_path)
+        chunk_number = _chunk_number_from_path(chunk)
+
+        primary_extractor = extractor
+        if primary_extractor == ExtractorUsed.GROBID.value and not grobid_available:
+            primary_extractor = fallback_extractor
+
+        primary_result, primary_error = _run_single_extractor(
+            primary_extractor,
+            chunk,
+            output_root,
+            chunk_number,
+            grobid_url,
+            active_logger,
+        )
+        if primary_result is not None:
+            results.append(primary_result)
+            continue
+
+        if primary_extractor != fallback_extractor:
+            active_logger.warning(
+                "Primary extractor '%s' failed for %s: %s",
+                primary_extractor,
+                chunk.name,
+                primary_error,
+            )
+            fallback_result, fallback_error = _run_single_extractor(
+                fallback_extractor,
+                chunk,
+                output_root,
+                chunk_number,
+                grobid_url,
+                active_logger,
+            )
+            if fallback_result is not None:
+                results.append(fallback_result)
+                continue
+            error_text = str(fallback_error)
+            active_logger.error("Fallback extractor '%s' failed for %s: %s", fallback_extractor, chunk.name, error_text)
+            results.append(
+                ExtractionResult(
+                    chunk_number=chunk_number,
+                    success=False,
+                    extractor=None,
+                    output_path=None,
+                    error=error_text,
+                )
+            )
+            continue
+
+        error_text = str(primary_error)
+        active_logger.error("Extractor '%s' failed for %s: %s", primary_extractor, chunk.name, error_text)
+        results.append(
+            ExtractionResult(
+                chunk_number=chunk_number,
+                success=False,
+                extractor=None,
+                output_path=None,
+                error=error_text,
+            )
+        )
+
+    grobid_successes = sum(1 for result in results if result.extractor == ExtractorUsed.GROBID and result.success)
+    pdfminer_successes = sum(1 for result in results if result.extractor == ExtractorUsed.PDFMINER and result.success)
+    failures = sum(1 for result in results if not result.success)
+    active_logger.info(
+        "Extraction summary: %s succeeded (grobid), %s succeeded (pdfminer), %s failed",
+        grobid_successes,
+        pdfminer_successes,
+        failures,
+    )
+
+    return results
+
+
 def _body_excerpt(text: str, max_chars: int = _MAX_ERROR_BODY_EXCERPT) -> str:
     # Stream-normalize whitespace to avoid allocating all tokens for large bodies.
     normalized_chars: list[str] = []
@@ -240,3 +367,65 @@ def _resolve_logger(
     if logger is None:
         return get_chunk_logger(chunk_number)
     return ChunkAdapter(logger, {"chunk": chunk_number})
+
+
+def _validate_extractor_name(value: str, field_name: str) -> None:
+    if value not in _VALID_EXTRACTORS:
+        raise ValueError(f"{field_name} must be one of: {sorted(_VALID_EXTRACTORS)}")
+
+
+def _chunk_number_from_path(path: Path) -> int:
+    match = _CHUNK_STEM_PATTERN.match(path.stem)
+    if not match:
+        raise ValueError(f"Chunk filename must match 'chunk-NNNN.pdf', got: {path.name}")
+    return int(match.group(1))
+
+
+def _run_single_extractor(
+    extractor_name: str,
+    chunk_path: Path,
+    extracted_dir: Path,
+    chunk_number: int,
+    grobid_url: str,
+    logger: logging.Logger,
+) -> tuple[ExtractionResult | None, Exception | None]:
+    try:
+        if extractor_name == ExtractorUsed.GROBID.value:
+            output_path = extracted_dir / f"chunk-{chunk_number:04d}.xml"
+            final_path = extract_grobid_chunk(
+                chunk_path,
+                output_path,
+                grobid_url,
+                logger=logger,
+                chunk_number=chunk_number,
+            )
+            return (
+                ExtractionResult(
+                    chunk_number=chunk_number,
+                    success=True,
+                    extractor=ExtractorUsed.GROBID,
+                    output_path=final_path,
+                    error=None,
+                ),
+                None,
+            )
+
+        output_path = extracted_dir / f"chunk-{chunk_number:04d}.txt"
+        final_path = extract_pdfminer_chunk(
+            chunk_path,
+            output_path,
+            logger=logger,
+            chunk_number=chunk_number,
+        )
+        return (
+            ExtractionResult(
+                chunk_number=chunk_number,
+                success=True,
+                extractor=ExtractorUsed.PDFMINER,
+                output_path=final_path,
+                error=None,
+            ),
+            None,
+        )
+    except (GrobidError, PdfMinerError, ValueError) as exc:
+        return None, exc
