@@ -250,7 +250,8 @@ def orchestrate_extraction(
             grobid_available = False
             grobid_unavailable_reason = str(exc)
             active_logger.warning(
-                "GROBID unavailable; using fallback extractor '%s' for all chunks: %s",
+                "GROBID unavailable; skipping all grobid extraction attempts (extractor=%s, fallback=%s): %s",
+                extractor,
                 fallback_extractor,
                 exc,
             )
