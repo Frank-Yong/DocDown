@@ -10,14 +10,20 @@ Convert extracted intermediate files (TEI XML or plain text) into GitHub-Flavore
 
 ## Acceptance Criteria
 
-- [ ] TEI XML files (from GROBID) are converted to GFM Markdown via Pandoc.
-- [ ] Plain text files (from pdfminer) are converted to GFM Markdown via Pandoc.
-- [ ] Input format is selected based on file extension (`.xml` → TEI, `.txt` → plain).
-- [ ] `--wrap=none` is used to prevent hard line wrapping.
-- [ ] Output is written to `workdir/markdown/chunk-NNNN.md`.
-- [ ] Pandoc errors are caught and reported with stderr output.
-- [ ] Conversion time per chunk is logged.
-- [ ] Unit tests verify correct Pandoc flags for each input format.
+- [x] TEI XML files (from GROBID) are converted to GFM Markdown via Pandoc.
+- [x] Plain text files (from pdfminer) are converted to GFM Markdown via Pandoc.
+- [x] Input format is selected based on file extension (`.xml` → TEI, `.txt` → markdown-compatible plain text).
+- [x] `--wrap=none` is used to prevent hard line wrapping.
+- [x] Output is written to `workdir/markdown/chunk-NNNN.md`.
+- [x] Pandoc errors are caught and reported with stderr output.
+- [x] Conversion time per chunk is logged.
+- [x] Unit tests verify correct Pandoc flags for each input format.
+
+Implemented in:
+- `docdown/stages/convert.py`
+- `docdown/cli.py`
+- `tests/test_convert.py`
+- `tests/test_cli.py`
 
 ## Implementation Notes
 
@@ -35,6 +41,51 @@ def convert_to_markdown(input_path, output_path):
         "--wrap=none",
         "-o", str(output_path),
     ], check=True, capture_output=True, text=True)
+```
+
+### Artifact Class Diagram
+
+```mermaid
+classDiagram
+    class PandocError {
+        <<exception>>
+    }
+
+    class ConvertStageModule {
+        <<module: docdown/stages/convert.py>>
+        +ensure_pandoc_available(logger) None
+        +convert_to_markdown(input_path, output_path, logger, chunk_number) Path
+        -_input_format_for_path(path) str
+    }
+
+    class CliModule {
+        <<module: docdown/cli.py>>
+        +main(...)
+    }
+
+    class WorkDir {
+        <<module: docdown/workdir.py>>
+        +markdown(chunk_number) Path
+    }
+
+    class PandocTool {
+        <<external: pandoc>>
+        +pandoc --version
+        +pandoc input -f tei|markdown -t gfm --wrap=none -o output
+    }
+
+    class TestConvert {
+        <<tests/test_convert.py>>
+        +format flag tests
+        +availability test
+        +error handling tests
+    }
+
+    ConvertStageModule ..> PandocTool : invokes
+    ConvertStageModule ..> PandocError : raises
+    CliModule ..> ConvertStageModule : calls
+    CliModule ..> WorkDir : output path contract
+    TestConvert ..> ConvertStageModule : verifies behavior
 ```
 
 ### Pandoc availability

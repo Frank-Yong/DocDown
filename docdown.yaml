@@ -3,7 +3,7 @@
 workdir: ./output
 chunk_size: 50
 parallel_workers: 4
-extractor: grobid
+extractor: pdfminer
 grobid_url: http://localhost:8070
 fallback_extractor: pdfminer
 table_extraction: true
