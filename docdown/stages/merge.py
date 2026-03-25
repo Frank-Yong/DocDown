@@ -1,4 +1,4 @@
-"""Stage 5 — Chunk merging and TOC generation."""
+"""Stage 6.1 — Chunk merging."""
 
 from __future__ import annotations
 
