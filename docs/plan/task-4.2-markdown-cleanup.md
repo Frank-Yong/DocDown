@@ -40,7 +40,7 @@ def collapse_blank_lines(text):
 If a chunk starts with `# Heading`, demote to `## Heading` (since `#` is reserved for the final merged document title). Only adjust if the chunk contains `#`-level headings.
 
 ```python
-def normalise_headings(text):
+def normalize_headings(text):
     if re.search(r"^# ", text, re.MULTILINE):
         text = re.sub(r"^(#{1,5}) ", lambda m: "#" + m.group(1) + " ", text, flags=re.MULTILINE)
     return text
@@ -53,6 +53,52 @@ def normalise_headings(text):
 - Remove all instances.
 
 This is a heuristic — false positives are possible. Log removals at `DEBUG` level.
+
+### Artifact Class Diagram
+
+```mermaid
+classDiagram
+    class CleanupError {
+        <<exception>>
+    }
+
+    class CleanupStageModule {
+        <<module: docdown/stages/cleanup.py>>
+        +cleanup_markdown_file(markdown_path, logger, chunk_number) Path
+        +cleanup_markdown_text(text, logger, chunk_number) str
+        +collapse_blank_lines(text) str
+        +normalize_headings(text) str
+        +strip_trailing_whitespace(text) str
+        +remove_repeated_header_footer_lines(text, logger, chunk_number, edge_line_count) str
+    }
+
+    class CliModule {
+        <<module: docdown/cli.py>>
+        +main(...)
+    }
+
+    class WorkDir {
+        <<module: docdown/workdir.py>>
+        +markdown(chunk_number) Path
+    }
+
+    class TestCleanup {
+        <<tests/test_cleanup.py>>
+        +rule-level unit tests
+        +idempotency test
+    }
+
+    class TestCli {
+        <<tests/test_cli.py>>
+        +conversion/cleanup integration tests
+    }
+
+    CliModule ..> CleanupStageModule : calls after conversion
+    CleanupStageModule ..> CleanupError : raises
+    CliModule ..> WorkDir : reads/writes chunk markdown paths
+    TestCleanup ..> CleanupStageModule : verifies behavior
+    TestCli ..> CliModule : verifies pipeline integration
+```
 
 ## References
 
