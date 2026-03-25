@@ -45,14 +45,14 @@ def merge_chunks(
         parts.append(_normalize_merge_part(f"<!-- chunk-{chunk_number:04d}: extraction failed -->"))
 
     merged_text = "\n\n---\n\n".join(parts)
-    target.parent.mkdir(parents=True, exist_ok=True)
     try:
+        target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(merged_text, encoding="utf-8", newline="")
+        file_size = target.stat().st_size
     except OSError as exc:
         raise MergeError(f"Failed writing merged markdown to {target}: {exc}") from exc
 
     line_count = merged_text.count("\n") + (1 if merged_text else 0)
-    file_size = target.stat().st_size
     active_logger.info("Merged markdown output: lines=%s size_bytes=%s path=%s", line_count, file_size, target)
     return target
 
