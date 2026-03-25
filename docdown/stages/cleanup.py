@@ -139,7 +139,19 @@ def remove_repeated_header_footer_lines(
     cleaned_blocks: list[str] = []
     for block in blocks:
         lines = block.split("\n")
-        kept_lines = [line for line in lines if line.rstrip(" \t") not in repeated]
+        non_empty_indices = [index for index, line in enumerate(lines) if line.strip()]
+        if not non_empty_indices:
+            cleaned_blocks.append(block)
+            continue
+
+        edge_indices = set(non_empty_indices[:edge_line_count])
+        edge_indices.update(non_empty_indices[-edge_line_count:])
+
+        kept_lines = [
+            line
+            for index, line in enumerate(lines)
+            if not (index in edge_indices and line.rstrip(" \t") in repeated)
+        ]
         cleaned_blocks.append("\n".join(kept_lines))
 
     return "\f".join(cleaned_blocks)

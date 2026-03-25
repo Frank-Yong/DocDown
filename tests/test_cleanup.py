@@ -83,6 +83,31 @@ def test_remove_repeated_header_footer_lines_ignores_empty_blocks_for_threshold(
     assert "Body A" in cleaned and "Body B" in cleaned
 
 
+def test_remove_repeated_header_footer_lines_keeps_matching_body_lines():
+    text = (
+        "Doc Header\n"
+        "Top A\n"
+        "Doc Header\n"
+        "Bottom A\n"
+        "Doc Footer\n"
+        "\f"
+        "Doc Header\n"
+        "Top B\n"
+        "Doc Header\n"
+        "Bottom B\n"
+        "Doc Footer\n"
+    )
+
+    cleaned = remove_repeated_header_footer_lines(text)
+
+    # Edge header/footer lines are removed per block.
+    assert cleaned.split("\f")[0].split("\n")[0] != "Doc Header"
+    assert cleaned.split("\f")[1].split("\n")[-1] != "Doc Footer"
+    # Interior lines with the same text remain untouched.
+    assert "Top A\nDoc Header\nBottom A" in cleaned
+    assert "Top B\nDoc Header\nBottom B" in cleaned
+
+
 def test_strip_trailing_whitespace_removes_line_suffix_spaces_tabs():
     text = "alpha  \n beta\t\ncharlie\n"
 
