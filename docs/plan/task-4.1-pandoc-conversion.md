@@ -71,7 +71,7 @@ classDiagram
     class PandocTool {
         <<external: pandoc>>
         +pandoc --version
-        +pandoc input -f tei|plain -t gfm --wrap=none -o output
+        +pandoc input -f tei|markdown -t gfm --wrap=none -o output
     }
 
     class TestConvert {
