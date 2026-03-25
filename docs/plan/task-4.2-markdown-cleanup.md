@@ -40,7 +40,7 @@ def collapse_blank_lines(text):
 If a chunk starts with `# Heading`, demote to `## Heading` (since `#` is reserved for the final merged document title). Only adjust if the chunk contains `#`-level headings.
 
 ```python
-def normalise_headings(text):
+def normalize_headings(text):
     if re.search(r"^# ", text, re.MULTILINE):
         text = re.sub(r"^(#{1,5}) ", lambda m: "#" + m.group(1) + " ", text, flags=re.MULTILINE)
     return text
