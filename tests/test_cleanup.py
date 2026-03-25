@@ -8,7 +8,7 @@ from docdown.stages.cleanup import (
     cleanup_markdown_file,
     cleanup_markdown_text,
     collapse_blank_lines,
-    normalise_headings,
+    normalize_headings,
     remove_repeated_header_footer_lines,
     strip_trailing_whitespace,
 )
@@ -22,18 +22,18 @@ def test_collapse_blank_lines_reduces_runs_over_two():
     assert cleaned == "line1\n\nline2\n"
 
 
-def test_normalise_headings_demotes_when_h1_present():
+def test_normalize_headings_demotes_when_h1_present():
     text = "# Title\n## Section\n### Subsection\n"
 
-    cleaned = normalise_headings(text)
+    cleaned = normalize_headings(text)
 
     assert cleaned == "## Title\n### Section\n#### Subsection\n"
 
 
-def test_normalise_headings_no_change_without_h1():
+def test_normalize_headings_no_change_without_h1():
     text = "## Section\n### Subsection\n"
 
-    cleaned = normalise_headings(text)
+    cleaned = normalize_headings(text)
 
     assert cleaned == text
 

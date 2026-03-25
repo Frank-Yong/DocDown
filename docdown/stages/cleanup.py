@@ -56,7 +56,7 @@ def cleanup_markdown_text(
 
     cleaned = strip_trailing_whitespace(normalized)
     cleaned = remove_repeated_header_footer_lines(cleaned, logger=active_logger, chunk_number=chunk_number)
-    cleaned = normalise_headings(cleaned)
+    cleaned = normalize_headings(cleaned)
     cleaned = collapse_blank_lines(cleaned)
 
     if trailing_newline and cleaned and not cleaned.endswith("\n"):
@@ -71,7 +71,7 @@ def collapse_blank_lines(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", text)
 
 
-def normalise_headings(text: str) -> str:
+def normalize_headings(text: str) -> str:
     """Demote headings by one level when H1 headings are present."""
 
     if re.search(r"^# ", text, flags=re.MULTILINE):
