@@ -13,7 +13,7 @@ LogLike = logging.Logger | logging.LoggerAdapter
 
 
 class MergeError(ValueError):
-    """Raised when chunk merge inputs are invalid or merge output cannot be written."""
+    """Raised when chunk merge inputs are invalid or chunk/output filesystem operations fail."""
 
 
 def merge_chunks(
