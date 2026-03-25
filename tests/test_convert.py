@@ -58,7 +58,7 @@ def test_convert_to_markdown_uses_tei_for_xml_input(tmp_path, monkeypatch):
     assert "--wrap=none" in command
 
 
-def test_convert_to_markdown_uses_plain_for_txt_input(tmp_path, monkeypatch):
+def test_convert_to_markdown_uses_markdown_for_txt_input(tmp_path, monkeypatch):
     source = tmp_path / "chunk-0002.txt"
     source.write_text("plain text", encoding="utf-8")
     output = tmp_path / "markdown" / "chunk-0002.md"
