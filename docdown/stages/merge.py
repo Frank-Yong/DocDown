@@ -34,12 +34,13 @@ def merge_chunks(
     parts: list[str] = []
     for chunk_number in range(1, total_chunks + 1):
         chunk_path = source_dir / f"chunk-{chunk_number:04d}.md"
-        if chunk_path.exists() and chunk_path.is_file() and chunk_path.stat().st_size > 0:
+        if chunk_path.exists() and chunk_path.is_file():
             try:
-                parts.append(chunk_path.read_text(encoding="utf-8"))
+                if chunk_path.stat().st_size > 0:
+                    parts.append(chunk_path.read_text(encoding="utf-8"))
+                    continue
             except OSError as exc:
                 raise MergeError(f"Failed reading chunk markdown {chunk_path}: {exc}") from exc
-            continue
 
         parts.append(f"<!-- chunk-{chunk_number:04d}: extraction failed -->\n")
 
