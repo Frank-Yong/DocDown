@@ -28,7 +28,12 @@ Implemented in:
 ### Implementation
 
 ```python
+from pathlib import Path
 import stat
+
+
+class MergeError(ValueError):
+    pass
 
 def merge_chunks(markdown_dir, output_path, total_chunks):
     target = Path(output_path)
