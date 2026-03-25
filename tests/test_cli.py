@@ -98,7 +98,13 @@ def test_cli_accepts_log_level_flag(tmp_path, monkeypatch):
         ],
     )
     monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
-    monkeypatch.setattr("docdown.cli.convert_to_markdown", lambda *args, **kwargs: tmp_path / "out" / "markdown" / "chunk-0001.md")
+
+    def _fake_convert(input_path, output_path, **kwargs):
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text("# ok", encoding="utf-8")
+        return Path(output_path)
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out"), "--log-level", "debug"])
@@ -170,7 +176,7 @@ def test_cli_fails_when_all_extractions_fail(tmp_path, monkeypatch):
     assert "Extraction failed for all chunks" in result.output
 
 
-def test_cli_fails_when_all_conversions_fail(tmp_path, monkeypatch):
+def test_cli_fails_when_all_conversion_or_cleanup_steps_fail(tmp_path, monkeypatch):
     dummy_pdf = tmp_path / "test.pdf"
     dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
     extracted_path = tmp_path / "out" / "extracted" / "chunk-0001.xml"
@@ -198,7 +204,7 @@ def test_cli_fails_when_all_conversions_fail(tmp_path, monkeypatch):
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
 
     assert result.exit_code != 0
-    assert "Pandoc conversion failed for all extracted chunks" in result.output
+    assert "Markdown conversion/cleanup failed for all extracted chunks" in result.output
 
 
 def test_cli_autoloads_repo_config_when_flag_omitted(tmp_path, monkeypatch):
@@ -236,7 +242,13 @@ def test_cli_autoloads_repo_config_when_flag_omitted(tmp_path, monkeypatch):
         lambda *args, **kwargs: [SimpleNamespace(chunk_number=1, success=True, output_path=extracted_path)],
     )
     monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
-    monkeypatch.setattr("docdown.cli.convert_to_markdown", lambda *args, **kwargs: tmp_path / "out" / "markdown" / "chunk-0001.md")
+
+    def _fake_convert(input_path, output_path, **kwargs):
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text("# ok", encoding="utf-8")
+        return Path(output_path)
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
@@ -279,7 +291,13 @@ def test_cli_uses_explicit_config_path_when_provided(tmp_path, monkeypatch):
         lambda *args, **kwargs: [SimpleNamespace(chunk_number=1, success=True, output_path=extracted_path)],
     )
     monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
-    monkeypatch.setattr("docdown.cli.convert_to_markdown", lambda *args, **kwargs: tmp_path / "out" / "markdown" / "chunk-0001.md")
+
+    def _fake_convert(input_path, output_path, **kwargs):
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text("# ok", encoding="utf-8")
+        return Path(output_path)
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out"), "--config", str(explicit_config)])
