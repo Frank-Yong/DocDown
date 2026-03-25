@@ -29,17 +29,31 @@ Implemented in:
 
 ```python
 def merge_chunks(markdown_dir, output_path, total_chunks):
-    parts = []
-    for i in range(1, total_chunks + 1):
-        chunk_path = markdown_dir / f"chunk-{i:04d}.md"
-        if chunk_path.exists() and chunk_path.stat().st_size > 0:
-            parts.append(chunk_path.read_text(encoding="utf-8"))
-        else:
-            parts.append(f"<!-- chunk-{i:04d}: extraction failed -->\n")
-    
-    merged = "\n\n---\n\n".join(parts)
-    with output_path.open("w", encoding="utf-8", newline="") as f:
-        f.write(merged)
+    target = Path(output_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    wrote_any = False
+    with target.open("w", encoding="utf-8", newline="") as f:
+        for i in range(1, total_chunks + 1):
+            part = _chunk_part(Path(markdown_dir), i)  # returns content or placeholder
+            if wrote_any:
+                f.write("\n\n---\n\n")
+            f.write(part)
+            wrote_any = True
+
+
+def _chunk_part(markdown_dir, chunk_number):
+    chunk_path = markdown_dir / f"chunk-{chunk_number:04d}.md"
+    try:
+        stat_info = chunk_path.stat()
+    except FileNotFoundError:
+        return f"<!-- chunk-{chunk_number:04d}: extraction failed -->"
+
+    if not stat.S_ISREG(stat_info.st_mode) or stat_info.st_size == 0:
+        return f"<!-- chunk-{chunk_number:04d}: extraction failed -->"
+
+    text = chunk_path.read_text(encoding="utf-8").rstrip("\r\n")
+    return text if text.strip() else f"<!-- chunk-{chunk_number:04d}: extraction failed -->"
 ```
 
 ### Ordering
