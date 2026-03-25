@@ -98,7 +98,13 @@ def test_cli_accepts_log_level_flag(tmp_path, monkeypatch):
         ],
     )
     monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
-    monkeypatch.setattr("docdown.cli.convert_to_markdown", lambda *args, **kwargs: tmp_path / "out" / "markdown" / "chunk-0001.md")
+
+    def _fake_convert(input_path, output_path, **kwargs):
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text("# ok", encoding="utf-8")
+        return Path(output_path)
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out"), "--log-level", "debug"])
@@ -236,7 +242,13 @@ def test_cli_autoloads_repo_config_when_flag_omitted(tmp_path, monkeypatch):
         lambda *args, **kwargs: [SimpleNamespace(chunk_number=1, success=True, output_path=extracted_path)],
     )
     monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
-    monkeypatch.setattr("docdown.cli.convert_to_markdown", lambda *args, **kwargs: tmp_path / "out" / "markdown" / "chunk-0001.md")
+
+    def _fake_convert(input_path, output_path, **kwargs):
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text("# ok", encoding="utf-8")
+        return Path(output_path)
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
@@ -279,7 +291,13 @@ def test_cli_uses_explicit_config_path_when_provided(tmp_path, monkeypatch):
         lambda *args, **kwargs: [SimpleNamespace(chunk_number=1, success=True, output_path=extracted_path)],
     )
     monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
-    monkeypatch.setattr("docdown.cli.convert_to_markdown", lambda *args, **kwargs: tmp_path / "out" / "markdown" / "chunk-0001.md")
+
+    def _fake_convert(input_path, output_path, **kwargs):
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text("# ok", encoding="utf-8")
+        return Path(output_path)
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out"), "--config", str(explicit_config)])

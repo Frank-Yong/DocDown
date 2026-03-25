@@ -10,13 +10,19 @@ Apply automated cleanup rules to each chunk's Markdown output to normalise forma
 
 ## Acceptance Criteria
 
-- [ ] Excessive blank lines are collapsed (>2 consecutive → 2).
-- [ ] Heading levels are normalised: no chunk starts below `##` (reserve `#` for document title).
-- [ ] Repeated page header/footer lines are detected and removed.
-- [ ] Trailing whitespace on each line is stripped.
-- [ ] Output overwrites the chunk Markdown file in place.
-- [ ] Cleanup is idempotent (running twice produces the same result).
-- [ ] Unit tests cover each cleanup rule independently.
+- [x] Excessive blank lines are collapsed (>2 consecutive → 2).
+- [x] Heading levels are normalised: no chunk starts below `##` (reserve `#` for document title).
+- [x] Repeated page header/footer lines are detected and removed.
+- [x] Trailing whitespace on each line is stripped.
+- [x] Output overwrites the chunk Markdown file in place.
+- [x] Cleanup is idempotent (running twice produces the same result).
+- [x] Unit tests cover each cleanup rule independently.
+
+Implemented in:
+- `docdown/stages/cleanup.py`
+- `docdown/cli.py`
+- `tests/test_cleanup.py`
+- `tests/test_cli.py`
 
 ## Implementation Notes
 

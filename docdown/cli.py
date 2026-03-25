@@ -5,6 +5,7 @@ from pathlib import Path
 import click
 
 from docdown.config import ConfigError, load_config
+from docdown.stages.cleanup import CleanupError, cleanup_markdown_file
 from docdown.stages.convert import PandocError, convert_to_markdown, ensure_pandoc_available
 from docdown.stages.extract import orchestrate_extraction
 from docdown.stages.split import PdfSplitError, PdfValidationError, split_pdf, validate_pdf
@@ -159,8 +160,13 @@ def main(
                 logger=logger,
                 chunk_number=result.chunk_number,
             )
-        except PandocError as exc:
-            logger.error("Pandoc conversion failed for chunk-%04d: %s", result.chunk_number, exc)
+            cleanup_markdown_file(
+                markdown_path,
+                logger=logger,
+                chunk_number=result.chunk_number,
+            )
+        except (PandocError, CleanupError) as exc:
+            logger.error("Markdown conversion/cleanup failed for chunk-%04d: %s", result.chunk_number, exc)
             continue
         converted_chunks += 1
 
