@@ -1,4 +1,4 @@
-"""Tests for merging and TOC generation."""
+"""Tests for Stage 6.1 chunk merging."""
 
 from __future__ import annotations
 
