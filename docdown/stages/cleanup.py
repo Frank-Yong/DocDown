@@ -103,11 +103,13 @@ def remove_repeated_header_footer_lines(
         return text
 
     occurrences: dict[str, int] = {}
+    considered_blocks = 0
     for block in blocks:
         lines = [line.rstrip(" \t") for line in block.split("\n")]
         non_empty = [line for line in lines if line.strip()]
         if not non_empty:
             continue
+        considered_blocks += 1
 
         edge_candidates = non_empty[:edge_line_count] + non_empty[-edge_line_count:]
         for candidate in set(edge_candidates):
@@ -116,7 +118,10 @@ def remove_repeated_header_footer_lines(
     if not occurrences:
         return text
 
-    threshold = len(blocks) / 2
+    if considered_blocks == 0:
+        return text
+
+    threshold = considered_blocks / 2
     repeated = {line for line, count in occurrences.items() if count > threshold}
     if not repeated:
         return text

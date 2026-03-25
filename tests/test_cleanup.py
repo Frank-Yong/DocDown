@@ -63,6 +63,28 @@ def test_remove_repeated_header_footer_lines_removes_majority_edges():
     assert "Body A" in cleaned and "Body B" in cleaned and "Body C" in cleaned
 
 
+def test_remove_repeated_header_footer_lines_ignores_empty_blocks_for_threshold():
+    text = (
+        "\f"
+        "Doc Header\n"
+        "Page 1 intro\n"
+        "Body A\n"
+        "Doc Footer\n"
+        "\f\f"
+        "Doc Header\n"
+        "Page 2 intro\n"
+        "Body B\n"
+        "Doc Footer\n"
+        "\f"
+    )
+
+    cleaned = remove_repeated_header_footer_lines(text)
+
+    assert "Doc Header" not in cleaned
+    assert "Doc Footer" not in cleaned
+    assert "Body A" in cleaned and "Body B" in cleaned
+
+
 def test_strip_trailing_whitespace_removes_line_suffix_spaces_tabs():
     text = "alpha  \n beta\t\ncharlie\n"
 
