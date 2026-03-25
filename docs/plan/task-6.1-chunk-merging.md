@@ -46,6 +46,57 @@ def merge_chunks(markdown_dir, output_path, total_chunks):
 
 Rely on the fixed-width `chunk-NNNN` naming convention. With zero-padded chunk numbers, lexicographic ordering is stable, but the implementation should still iterate by chunk number so missing chunks can be represented with placeholder comments.
 
+### Artifact Class Diagram
+
+```mermaid
+classDiagram
+    class MergeError {
+        <<exception>>
+    }
+
+    class MergeStageModule {
+        <<module: docdown/stages/merge.py>>
+        +merge_chunks(markdown_dir, output_path, total_chunks, logger) Path
+    }
+
+    class CliModule {
+        <<module: docdown/cli.py>>
+        +main(...)
+    }
+
+    class WorkDir {
+        <<module: docdown/workdir.py>>
+        +markdown_dir Path
+        +merged_markdown() Path
+    }
+
+    class SplitResult {
+        <<module: docdown/stages/split.py>>
+        +chunk_count int
+        +chunk_paths tuple~Path~
+    }
+
+    class TestMerge {
+        <<tests/test_merge.py>>
+        +ordering test
+        +separator test
+        +missing-chunk placeholder test
+        +output metrics logging test
+    }
+
+    class TestCli {
+        <<tests/test_cli.py>>
+        +merge error propagation test
+    }
+
+    CliModule ..> MergeStageModule : calls after conversion/cleanup
+    CliModule ..> SplitResult : provides total_chunks
+    CliModule ..> WorkDir : provides merge paths
+    MergeStageModule ..> MergeError : raises
+    TestMerge ..> MergeStageModule : verifies behavior
+    TestCli ..> CliModule : verifies integration
+```
+
 ## References
 
 - [technical-design.md §5.5.1 — Merge](../technical-design.md)
