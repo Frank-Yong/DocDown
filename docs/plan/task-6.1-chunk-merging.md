@@ -28,6 +28,8 @@ Implemented in:
 ### Implementation
 
 ```python
+import stat
+
 def merge_chunks(markdown_dir, output_path, total_chunks):
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -49,7 +51,10 @@ def _chunk_part(markdown_dir, chunk_number):
     except FileNotFoundError:
         return f"<!-- chunk-{chunk_number:04d}: extraction failed -->"
 
-    if not stat.S_ISREG(stat_info.st_mode) or stat_info.st_size == 0:
+    if not stat.S_ISREG(stat_info.st_mode):
+        raise MergeError(f"Chunk markdown path is not a file: {chunk_path}")
+
+    if stat_info.st_size == 0:
         return f"<!-- chunk-{chunk_number:04d}: extraction failed -->"
 
     text = chunk_path.read_text(encoding="utf-8").rstrip("\r\n")
