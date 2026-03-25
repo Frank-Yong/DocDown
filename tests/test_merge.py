@@ -49,6 +49,18 @@ def test_merge_chunks_writes_placeholder_for_missing_or_empty_chunks(tmp_path):
 	assert "<!-- chunk-0003: extraction failed -->" in merged
 
 
+def test_merge_chunks_normalizes_trailing_newlines_around_separators(tmp_path):
+	markdown_dir = tmp_path / "markdown"
+	markdown_dir.mkdir()
+	(markdown_dir / "chunk-0001.md").write_text("first\n", encoding="utf-8")
+	(markdown_dir / "chunk-0002.md").write_text("second\n\n", encoding="utf-8")
+
+	output_path = tmp_path / "merged.md"
+	merge_chunks(markdown_dir, output_path, 2)
+
+	assert output_path.read_text(encoding="utf-8") == "first\n\n---\n\nsecond"
+
+
 def test_merge_chunks_logs_line_count_and_file_size(tmp_path):
 	markdown_dir = tmp_path / "markdown"
 	markdown_dir.mkdir()

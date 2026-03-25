@@ -37,12 +37,12 @@ def merge_chunks(
         if chunk_path.exists() and chunk_path.is_file():
             try:
                 if chunk_path.stat().st_size > 0:
-                    parts.append(chunk_path.read_text(encoding="utf-8"))
+                    parts.append(_normalize_merge_part(chunk_path.read_text(encoding="utf-8")))
                     continue
             except OSError as exc:
                 raise MergeError(f"Failed reading chunk markdown {chunk_path}: {exc}") from exc
 
-        parts.append(f"<!-- chunk-{chunk_number:04d}: extraction failed -->\n")
+        parts.append(_normalize_merge_part(f"<!-- chunk-{chunk_number:04d}: extraction failed -->"))
 
     merged_text = "\n\n---\n\n".join(parts)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -55,3 +55,7 @@ def merge_chunks(
     file_size = target.stat().st_size
     active_logger.info("Merged markdown output: lines=%s size_bytes=%s path=%s", line_count, file_size, target)
     return target
+
+
+def _normalize_merge_part(text: str) -> str:
+    return text.rstrip("\r\n")
