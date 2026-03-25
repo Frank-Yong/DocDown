@@ -176,7 +176,7 @@ def test_cli_fails_when_all_extractions_fail(tmp_path, monkeypatch):
     assert "Extraction failed for all chunks" in result.output
 
 
-def test_cli_fails_when_all_conversions_fail(tmp_path, monkeypatch):
+def test_cli_fails_when_all_conversion_or_cleanup_steps_fail(tmp_path, monkeypatch):
     dummy_pdf = tmp_path / "test.pdf"
     dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
     extracted_path = tmp_path / "out" / "extracted" / "chunk-0001.xml"
@@ -204,7 +204,7 @@ def test_cli_fails_when_all_conversions_fail(tmp_path, monkeypatch):
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
 
     assert result.exit_code != 0
-    assert "Pandoc conversion failed for all extracted chunks" in result.output
+    assert "Markdown conversion/cleanup failed for all extracted chunks" in result.output
 
 
 def test_cli_autoloads_repo_config_when_flag_omitted(tmp_path, monkeypatch):

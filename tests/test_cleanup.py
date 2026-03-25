@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from docdown.stages.cleanup import (
     cleanup_markdown_file,
     cleanup_markdown_text,

@@ -171,7 +171,7 @@ def main(
         converted_chunks += 1
 
     if converted_chunks == 0:
-        raise click.ClickException("Pandoc conversion failed for all extracted chunks.")
+        raise click.ClickException("Markdown conversion/cleanup failed for all extracted chunks.")
 
     logger.info("Conversion summary: %s converted, %s extraction successes skipped/failed", converted_chunks, len(successful_extractions) - converted_chunks)
 
