@@ -8,6 +8,7 @@ from docdown.config import ConfigError, load_config
 from docdown.stages.cleanup import CleanupError, cleanup_markdown_file
 from docdown.stages.convert import PandocError, convert_to_markdown, ensure_pandoc_available
 from docdown.stages.extract import orchestrate_extraction
+from docdown.stages.merge import MergeError, merge_chunks
 from docdown.stages.split import PdfSplitError, PdfValidationError, split_pdf, validate_pdf
 from docdown.utils.logging import configure_logging
 from docdown.workdir import WorkDir, WorkDirError
@@ -174,6 +175,16 @@ def main(
         raise click.ClickException("Markdown conversion/cleanup failed for all extracted chunks.")
 
     logger.info("Conversion summary: %s converted, %s extraction successes skipped/failed", converted_chunks, len(successful_extractions) - converted_chunks)
+
+    try:
+        merge_chunks(
+            work_dir.markdown_dir,
+            work_dir.merged_markdown(),
+            split_result.chunk_count,
+            logger=logger,
+        )
+    except MergeError as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 def _version():

@@ -10,12 +10,18 @@ Concatenate all chunk Markdown files into a single merged document in correct or
 
 ## Acceptance Criteria
 
-- [ ] All chunk Markdown files in `workdir/markdown/` are concatenated in numeric order.
-- [ ] A horizontal rule (`---`) is inserted between chunks as a visual separator.
-- [ ] Failed/missing chunks are represented in the merged output with a placeholder comment: `<!-- chunk-NNNN: extraction failed -->`.
-- [ ] Output is written to `workdir/merged.md`.
-- [ ] Total line count and file size of merged output are logged.
-- [ ] Unit tests verify: correct ordering, separator insertion, missing-chunk handling.
+- [x] All chunk Markdown files in `workdir/markdown/` are concatenated in numeric order.
+- [x] A horizontal rule (`---`) is inserted between chunks as a visual separator.
+- [x] Failed/missing chunks are represented in the merged output with a placeholder comment: `<!-- chunk-NNNN: extraction failed -->`.
+- [x] Output is written to `workdir/merged.md`.
+- [x] Total line count and file size of merged output are logged.
+- [x] Unit tests verify: correct ordering, separator insertion, missing-chunk handling.
+
+Implemented in:
+- `docdown/stages/merge.py`
+- `docdown/cli.py`
+- `tests/test_merge.py`
+- `tests/test_cli.py`
 
 ## Implementation Notes
 
