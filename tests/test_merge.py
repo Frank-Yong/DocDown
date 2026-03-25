@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from docdown.stages.merge import merge_chunks
+import pytest
+
+from docdown.stages.merge import MergeError, merge_chunks
 
 
 def test_merge_chunks_concatenates_in_numeric_order(tmp_path):
@@ -76,3 +78,12 @@ def test_merge_chunks_logs_line_count_and_file_size(tmp_path):
     logged_message = logger.info.call_args.args[0]
     assert "Merged markdown output: lines=" in logged_message
     assert "size_bytes=" in logged_message
+
+
+def test_merge_chunks_rejects_non_file_chunk_paths(tmp_path):
+    markdown_dir = tmp_path / "markdown"
+    markdown_dir.mkdir()
+    (markdown_dir / "chunk-0001.md").mkdir()
+
+    with pytest.raises(MergeError, match="not a file"):
+        merge_chunks(markdown_dir, tmp_path / "merged.md", 1)

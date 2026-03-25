@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+import stat as stat_types
 
 from docdown.utils.logging import get_logger
 
@@ -34,15 +35,25 @@ def merge_chunks(
     parts: list[str] = []
     for chunk_number in range(1, total_chunks + 1):
         chunk_path = source_dir / f"chunk-{chunk_number:04d}.md"
-        if chunk_path.exists() and chunk_path.is_file():
-            try:
-                if chunk_path.stat().st_size > 0:
-                    parts.append(_normalize_merge_part(chunk_path.read_text(encoding="utf-8")))
-                    continue
-            except OSError as exc:
-                raise MergeError(f"Failed reading chunk markdown {chunk_path}: {exc}") from exc
+        try:
+            chunk_stat = chunk_path.stat()
+        except FileNotFoundError:
+            parts.append(_normalize_merge_part(f"<!-- chunk-{chunk_number:04d}: extraction failed -->"))
+            continue
+        except OSError as exc:
+            raise MergeError(f"Failed reading chunk markdown {chunk_path}: {exc}") from exc
 
-        parts.append(_normalize_merge_part(f"<!-- chunk-{chunk_number:04d}: extraction failed -->"))
+        if not stat_types.S_ISREG(chunk_stat.st_mode):
+            raise MergeError(f"Chunk markdown path is not a file: {chunk_path}")
+
+        if chunk_stat.st_size == 0:
+            parts.append(_normalize_merge_part(f"<!-- chunk-{chunk_number:04d}: extraction failed -->"))
+            continue
+
+        try:
+            parts.append(_normalize_merge_part(chunk_path.read_text(encoding="utf-8")))
+        except OSError as exc:
+            raise MergeError(f"Failed reading chunk markdown {chunk_path}: {exc}") from exc
 
     merged_text = "\n\n---\n\n".join(parts)
     try:
