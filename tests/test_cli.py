@@ -199,3 +199,90 @@ def test_cli_fails_when_all_conversions_fail(tmp_path, monkeypatch):
 
     assert result.exit_code != 0
     assert "Pandoc conversion failed for all extracted chunks" in result.output
+
+
+def test_cli_autoloads_repo_config_when_flag_omitted(tmp_path, monkeypatch):
+    dummy_pdf = tmp_path / "test.pdf"
+    dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+    extracted_path = tmp_path / "out" / "extracted" / "chunk-0001.xml"
+    captured: dict[str, object] = {}
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "docdown.yaml").write_text("log_level: INFO\n", encoding="utf-8")
+
+    def _fake_load_config(config_path=None, cli_overrides=None):
+        captured["config_path"] = config_path
+        return SimpleNamespace(
+            input=dummy_pdf,
+            workdir=tmp_path / "out",
+            chunk_size=50,
+            extractor="pdfminer",
+            fallback_extractor="pdfminer",
+            grobid_url="http://localhost:8070",
+            log_level="INFO",
+        )
+
+    monkeypatch.setattr("docdown.cli.load_config", _fake_load_config)
+    monkeypatch.setattr(
+        "docdown.cli.validate_pdf",
+        lambda *args, **kwargs: SimpleNamespace(page_count=1, file_size_bytes=dummy_pdf.stat().st_size),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.split_pdf",
+        lambda *args, **kwargs: SimpleNamespace(chunk_count=1, chunk_paths=(tmp_path / "out" / "chunks" / "chunk-0001.pdf",)),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.orchestrate_extraction",
+        lambda *args, **kwargs: [SimpleNamespace(chunk_number=1, success=True, output_path=extracted_path)],
+    )
+    monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", lambda *args, **kwargs: tmp_path / "out" / "markdown" / "chunk-0001.md")
+
+    runner = CliRunner()
+    result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
+
+    assert result.exit_code == 0
+    assert captured["config_path"] == Path("docdown.yaml")
+
+
+def test_cli_uses_explicit_config_path_when_provided(tmp_path, monkeypatch):
+    dummy_pdf = tmp_path / "test.pdf"
+    dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+    extracted_path = tmp_path / "out" / "extracted" / "chunk-0001.xml"
+    explicit_config = tmp_path / "custom.yaml"
+    explicit_config.write_text("log_level: INFO\n", encoding="utf-8")
+    captured: dict[str, object] = {}
+
+    def _fake_load_config(config_path=None, cli_overrides=None):
+        captured["config_path"] = config_path
+        return SimpleNamespace(
+            input=dummy_pdf,
+            workdir=tmp_path / "out",
+            chunk_size=50,
+            extractor="pdfminer",
+            fallback_extractor="pdfminer",
+            grobid_url="http://localhost:8070",
+            log_level="INFO",
+        )
+
+    monkeypatch.setattr("docdown.cli.load_config", _fake_load_config)
+    monkeypatch.setattr(
+        "docdown.cli.validate_pdf",
+        lambda *args, **kwargs: SimpleNamespace(page_count=1, file_size_bytes=dummy_pdf.stat().st_size),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.split_pdf",
+        lambda *args, **kwargs: SimpleNamespace(chunk_count=1, chunk_paths=(tmp_path / "out" / "chunks" / "chunk-0001.pdf",)),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.orchestrate_extraction",
+        lambda *args, **kwargs: [SimpleNamespace(chunk_number=1, success=True, output_path=extracted_path)],
+    )
+    monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", lambda *args, **kwargs: tmp_path / "out" / "markdown" / "chunk-0001.md")
+
+    runner = CliRunner()
+    result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out"), "--config", str(explicit_config)])
+
+    assert result.exit_code == 0
+    assert captured["config_path"] == explicit_config

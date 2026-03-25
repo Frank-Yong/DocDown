@@ -1,5 +1,7 @@
 """CLI entry point for DocDown."""
 
+from pathlib import Path
+
 import click
 
 from docdown.config import ConfigError, load_config
@@ -78,7 +80,7 @@ def main(
     }
 
     try:
-        cfg = load_config(config_path=config, cli_overrides=cli_overrides)
+        cfg = load_config(config_path=_resolve_config_path(config), cli_overrides=cli_overrides)
     except ConfigError as exc:
         raise click.ClickException(str(exc)) from exc
 
@@ -171,4 +173,11 @@ def main(
 def _version():
     from docdown import __version__
     return __version__
+
+
+def _resolve_config_path(config_option: str | None) -> Path | None:
+    if config_option is not None:
+        return Path(config_option)
+    default_config = Path("docdown.yaml")
+    return default_config if default_config.exists() else None
 
