@@ -75,3 +75,21 @@ def test_count_headings_for_toc_respects_depth_and_ignores_fenced_blocks():
 
     assert _count_headings_for_toc(markdown, 3) == 3
     assert _count_headings_for_toc(markdown, 4) == 4
+
+
+def test_count_headings_for_toc_accepts_commonmark_indent_rules():
+    markdown = "\n".join(
+        [
+            "   ## Indented Heading",
+            "    ### Too Indented",
+            "   ```",
+            "   ## Inside Fence",
+            "   ```",
+            "~~~",
+            "## Also Inside Fence",
+            "~~~",
+            " # OneSpaceHeading",
+        ]
+    )
+
+    assert _count_headings_for_toc(markdown, 3) == 2

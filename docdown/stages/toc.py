@@ -125,13 +125,16 @@ def _count_headings_for_toc(markdown_lines: Iterable[str] | str, toc_depth: int)
     in_fenced_block = False
     lines = markdown_lines.splitlines() if isinstance(markdown_lines, str) else markdown_lines
     for line in lines:
-        if line.startswith("```") or line.startswith("~~~"):
+        normalized = line.lstrip(" ")
+        leading_spaces = len(line) - len(normalized)
+
+        if leading_spaces <= 3 and (normalized.startswith("```") or normalized.startswith("~~~")):
             in_fenced_block = not in_fenced_block
             continue
         if in_fenced_block:
             continue
 
-        match = re.match(r"^(#{1,6})[ \t]+.+$", line)
+        match = re.match(r"^ {0,3}(#{1,6})[ \t]+.+$", line)
         if match is None:
             continue
 
