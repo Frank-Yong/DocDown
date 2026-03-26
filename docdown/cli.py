@@ -38,7 +38,7 @@ from docdown.workdir import WorkDir, WorkDirError
 @click.option("--table-extraction/--no-table-extraction", default=None, help="Enable table extraction")
 @click.option("--llm-cleanup/--no-llm-cleanup", default=None, help="Enable LLM cleanup pipeline")
 @click.option("--llm-model", type=str, default=None, help="LLM model identifier")
-@click.option("--toc-depth", type=int, default=None, help="TOC maximum heading depth (1-6)")
+@click.option("--toc-depth", type=click.IntRange(1, 6), default=None, help="TOC maximum heading depth (1-6)")
 @click.option(
     "--log-level",
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "WARN"], case_sensitive=False),

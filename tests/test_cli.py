@@ -114,6 +114,18 @@ def test_cli_accepts_log_level_flag(tmp_path, monkeypatch):
     assert result.exit_code == 0
 
 
+def test_cli_rejects_invalid_toc_depth_value(tmp_path):
+    dummy_pdf = tmp_path / "test.pdf"
+    dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+
+    runner = CliRunner()
+    result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out"), "--toc-depth", "0"])
+
+    assert result.exit_code != 0
+    assert "--toc-depth" in result.output
+    assert "Invalid value" in result.output
+
+
 def test_cli_surfaces_pdf_validation_errors(tmp_path, monkeypatch):
     dummy_pdf = tmp_path / "test.pdf"
     dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
