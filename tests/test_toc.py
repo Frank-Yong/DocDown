@@ -7,7 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from docdown.stages.toc import TocError, _count_headings_for_toc, generate_toc
+from docdown.stages.toc import TocError, _count_headings_for_toc, generate_toc, log_heading_diagnostics
 
 
 def test_generate_toc_runs_pandoc_and_logs_entry_count(tmp_path, monkeypatch):
@@ -18,7 +18,10 @@ def test_generate_toc_runs_pandoc_and_logs_entry_count(tmp_path, monkeypatch):
     def _fake_run(command, capture_output, text, check):
         assert "--toc" in command
         assert "--toc-depth=3" in command
-        final.write_text("[TOC]\n\n- [Title](#title)\n", encoding="utf-8")
+        final.write_text(
+            "## Table of Contents\n\n- [Title](#title)\n  - [Intro](#intro)\n\n# Title\n",
+            encoding="utf-8",
+        )
         return subprocess.CompletedProcess(command, 0, "", "")
 
     monkeypatch.setattr("docdown.stages.toc.subprocess.run", _fake_run)
@@ -28,9 +31,10 @@ def test_generate_toc_runs_pandoc_and_logs_entry_count(tmp_path, monkeypatch):
 
     assert output == final
     assert final.exists()
-    assert "[TOC]" in final.read_text(encoding="utf-8")
+    assert "Table of Contents" in final.read_text(encoding="utf-8")
     logger.info.assert_called_once()
-    assert logger.info.call_args.args[1] == 3
+    assert logger.info.call_args.args[1] == "pandoc"
+    assert logger.info.call_args.args[2] == 3
 
 
 def test_generate_toc_copies_merged_when_pandoc_fails(tmp_path, monkeypatch):
@@ -47,9 +51,35 @@ def test_generate_toc_copies_merged_when_pandoc_fails(tmp_path, monkeypatch):
     output = generate_toc(merged, final, logger=logger)
 
     assert output == final
-    assert final.read_text(encoding="utf-8") == merged.read_text(encoding="utf-8")
+    rendered = final.read_text(encoding="utf-8")
+    assert rendered.startswith("## Table of Contents")
+    assert "- [Title](#title)" in rendered
+    assert "## Intro" in rendered
     logger.warning.assert_called_once()
     assert logger.info.call_count == 1
+
+
+def test_generate_toc_inserts_python_fallback_when_pandoc_output_has_no_toc(tmp_path, monkeypatch):
+    merged = tmp_path / "merged.md"
+    merged.write_text("# Title\n\n## Intro\n\n### Details\n", encoding="utf-8")
+    final = tmp_path / "final.md"
+
+    def _fake_run(command, capture_output, text, check):
+        final.write_text("# Title\n\n## Intro\n\n### Details\n", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr("docdown.stages.toc.subprocess.run", _fake_run)
+
+    logger = Mock()
+    output = generate_toc(merged, final, toc_depth=3, logger=logger)
+
+    assert output == final
+    rendered = final.read_text(encoding="utf-8")
+    assert rendered.startswith("## Table of Contents")
+    assert "- [Title](#title)" in rendered
+    assert "  - [Intro](#intro)" in rendered
+    assert "    - [Details](#details)" in rendered
+    assert logger.info.call_args.args[1] == "python-fallback"
 
 
 def test_generate_toc_rejects_invalid_depth(tmp_path):
@@ -93,3 +123,46 @@ def test_count_headings_for_toc_accepts_commonmark_indent_rules():
     )
 
     assert _count_headings_for_toc(markdown, 3) == 2
+
+
+def test_python_toc_fallback_uses_unique_github_anchors_for_duplicates(tmp_path, monkeypatch):
+    merged = tmp_path / "merged.md"
+    merged.write_text("## Intro\n\n## Intro\n", encoding="utf-8")
+    final = tmp_path / "final.md"
+
+    def _fake_run(command, capture_output, text, check):
+        final.write_text("## Intro\n\n## Intro\n", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr("docdown.stages.toc.subprocess.run", _fake_run)
+
+    generate_toc(merged, final, toc_depth=3, logger=Mock())
+    rendered = final.read_text(encoding="utf-8")
+    assert "- [Intro](#intro)" in rendered
+    assert "- [Intro](#intro-1)" in rendered
+
+
+def test_log_heading_diagnostics_reports_chunk_and_merged_heading_stats(tmp_path):
+    markdown_dir = tmp_path / "markdown"
+    markdown_dir.mkdir()
+    (markdown_dir / "chunk-0001.md").write_text("# A\n\n## B\n", encoding="utf-8")
+    (markdown_dir / "chunk-0002.md").write_text("no headings\n", encoding="utf-8")
+
+    merged = tmp_path / "merged.md"
+    merged.write_text("# A\n\n## B\n\n### C\n", encoding="utf-8")
+
+    logger = Mock()
+    log_heading_diagnostics(markdown_dir, merged, logger=logger)
+
+    assert logger.info.call_count == 2
+    first = logger.info.call_args_list[0].args
+    assert first[0].startswith("Heading diagnostics (chunks):")
+    assert first[1] == 2
+    assert first[2] == 1
+    assert first[3] == 1
+    assert first[4] == "h1:1,h2:1"
+
+    second = logger.info.call_args_list[1].args
+    assert second[0].startswith("Heading diagnostics (merged):")
+    assert second[1] == 3
+    assert second[2] == "h1:1,h2:1,h3:1"

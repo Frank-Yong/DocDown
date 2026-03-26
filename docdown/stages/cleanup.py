@@ -21,6 +21,9 @@ def cleanup_markdown_file(
     *,
     logger: LogLike | None = None,
     chunk_number: int | None = None,
+    heuristic_numbered_headings: bool = True,
+    heuristic_titlecase_headings: bool = False,
+    heuristic_allcaps_headings: bool = False,
 ) -> Path:
     """Apply cleanup rules in-place to a markdown chunk file."""
 
@@ -31,7 +34,14 @@ def cleanup_markdown_file(
         raise CleanupError(f"Markdown cleanup input not found: {path}")
 
     original = path.read_text(encoding="utf-8")
-    cleaned = cleanup_markdown_text(original, logger=active_logger, chunk_number=chunk_number)
+    cleaned = cleanup_markdown_text(
+        original,
+        logger=active_logger,
+        chunk_number=chunk_number,
+        heuristic_numbered_headings=heuristic_numbered_headings,
+        heuristic_titlecase_headings=heuristic_titlecase_headings,
+        heuristic_allcaps_headings=heuristic_allcaps_headings,
+    )
 
     if cleaned != original:
         path.write_text(cleaned, encoding="utf-8")
@@ -47,6 +57,9 @@ def cleanup_markdown_text(
     *,
     logger: LogLike | None = None,
     chunk_number: int | None = None,
+    heuristic_numbered_headings: bool = True,
+    heuristic_titlecase_headings: bool = False,
+    heuristic_allcaps_headings: bool = False,
 ) -> str:
     """Apply all markdown cleanup rules and return cleaned text."""
 
@@ -56,6 +69,12 @@ def cleanup_markdown_text(
 
     cleaned = strip_trailing_whitespace(normalized)
     cleaned = remove_repeated_header_footer_lines(cleaned, logger=active_logger, chunk_number=chunk_number)
+    cleaned = reconstruct_headings(
+        cleaned,
+        heuristic_numbered_headings=heuristic_numbered_headings,
+        heuristic_titlecase_headings=heuristic_titlecase_headings,
+        heuristic_allcaps_headings=heuristic_allcaps_headings,
+    )
     cleaned = normalize_headings(cleaned)
     cleaned = collapse_blank_lines(cleaned)
 
@@ -84,6 +103,104 @@ def strip_trailing_whitespace(text: str) -> str:
 
     lines = text.split("\n")
     return "\n".join(line.rstrip(" \t") for line in lines)
+
+
+def reconstruct_headings(
+    text: str,
+    *,
+    heuristic_numbered_headings: bool,
+    heuristic_titlecase_headings: bool,
+    heuristic_allcaps_headings: bool,
+) -> str:
+    """Promote probable section-title lines to level-2 headings using conservative heuristics."""
+
+    lines = text.split("\n")
+    rebuilt: list[str] = []
+    in_fenced_block = False
+
+    for line in lines:
+        stripped = line.strip()
+        normalized = line.lstrip(" ")
+        leading_spaces = len(line) - len(normalized)
+
+        if leading_spaces <= 3 and (normalized.startswith("```") or normalized.startswith("~~~")):
+            in_fenced_block = not in_fenced_block
+            rebuilt.append(line)
+            continue
+
+        if in_fenced_block or not _is_heading_candidate_line(stripped):
+            rebuilt.append(line)
+            continue
+
+        if heuristic_numbered_headings and _looks_like_numbered_heading(stripped):
+            rebuilt.append(f"## {stripped}")
+            continue
+
+        if heuristic_allcaps_headings and _looks_like_allcaps_heading(stripped):
+            rebuilt.append(f"## {stripped}")
+            continue
+
+        if heuristic_titlecase_headings and _looks_like_titlecase_heading(stripped):
+            rebuilt.append(f"## {stripped}")
+            continue
+
+        rebuilt.append(line)
+
+    return "\n".join(rebuilt)
+
+
+def _is_heading_candidate_line(stripped: str) -> bool:
+    if not stripped:
+        return False
+    if len(stripped) > 90:
+        return False
+    if len(stripped.split()) > 14:
+        return False
+    if stripped.startswith(("#", "-", "*", ">", "|", "<!--")):
+        return False
+    if stripped.startswith("[") and stripped.endswith("]"):
+        return False
+    if "http://" in stripped or "https://" in stripped:
+        return False
+    if stripped.endswith((".", "?", "!", ";", ",")):
+        return False
+    return True
+
+
+def _looks_like_numbered_heading(stripped: str) -> bool:
+    return (
+        re.match(r"^\d+(?:\.\d+){0,3}\s+[A-Z0-9][^\n]*$", stripped) is not None
+        or re.match(r"^[A-Z][\.)]\s+[A-Z0-9][^\n]*$", stripped) is not None
+    )
+
+
+def _looks_like_allcaps_heading(stripped: str) -> bool:
+    alpha_chars = [ch for ch in stripped if ch.isalpha()]
+    if len(alpha_chars) < 4:
+        return False
+    if stripped != stripped.upper():
+        return False
+    return re.match(r"^[A-Z0-9][A-Z0-9 /&()\-:]+$", stripped) is not None
+
+
+def _looks_like_titlecase_heading(stripped: str) -> bool:
+    words = [part for part in re.split(r"\s+", stripped) if part]
+    if len(words) < 2:
+        return False
+
+    stopwords = {"a", "an", "and", "as", "at", "by", "for", "in", "of", "on", "or", "the", "to", "with"}
+    good = 0
+    for word in words:
+        cleaned = word.strip("()[]{}:;\"'`.,")
+        if not cleaned:
+            continue
+        if cleaned.lower() in stopwords:
+            good += 1
+            continue
+        if cleaned[0].isupper() and any(ch.isalpha() for ch in cleaned):
+            good += 1
+
+    return good / max(len(words), 1) >= 0.7
 
 
 def remove_repeated_header_footer_lines(

@@ -40,6 +40,9 @@ class Config:
     table_extraction: bool = True
     llm_cleanup: bool = False
     llm_model: str | None = None
+    heuristic_numbered_headings: bool = True
+    heuristic_titlecase_headings: bool = False
+    heuristic_allcaps_headings: bool = False
     toc_depth: int = 3
     log_level: str = "INFO"
     validation: ValidationConfig = field(default_factory=ValidationConfig)
@@ -76,6 +79,9 @@ def _default_data() -> dict[str, Any]:
         "table_extraction": defaults.table_extraction,
         "llm_cleanup": defaults.llm_cleanup,
         "llm_model": defaults.llm_model,
+        "heuristic_numbered_headings": defaults.heuristic_numbered_headings,
+        "heuristic_titlecase_headings": defaults.heuristic_titlecase_headings,
+        "heuristic_allcaps_headings": defaults.heuristic_allcaps_headings,
         "toc_depth": defaults.toc_depth,
         "log_level": defaults.log_level,
         "validation": {
@@ -164,6 +170,18 @@ def _build_and_validate(data: dict[str, Any]) -> Config:
             table_extraction=_require_bool(data["table_extraction"], "table_extraction"),
             llm_cleanup=_require_bool(data["llm_cleanup"], "llm_cleanup"),
             llm_model=str(data["llm_model"]) if data["llm_model"] is not None else None,
+            heuristic_numbered_headings=_require_bool(
+                data["heuristic_numbered_headings"],
+                "heuristic_numbered_headings",
+            ),
+            heuristic_titlecase_headings=_require_bool(
+                data["heuristic_titlecase_headings"],
+                "heuristic_titlecase_headings",
+            ),
+            heuristic_allcaps_headings=_require_bool(
+                data["heuristic_allcaps_headings"],
+                "heuristic_allcaps_headings",
+            ),
             toc_depth=_require_int(data["toc_depth"], "toc_depth"),
             log_level=str(data["log_level"]).upper(),
             validation=validation_cfg,

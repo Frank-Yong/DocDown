@@ -10,7 +10,7 @@ from docdown.stages.convert import PandocError, convert_to_markdown, ensure_pand
 from docdown.stages.extract import orchestrate_extraction
 from docdown.stages.merge import MergeError, merge_chunks
 from docdown.stages.split import PdfSplitError, PdfValidationError, split_pdf, validate_pdf
-from docdown.stages.toc import TocError, generate_toc
+from docdown.stages.toc import TocError, generate_toc, log_heading_diagnostics
 from docdown.utils.logging import configure_logging
 from docdown.workdir import WorkDir, WorkDirError
 
@@ -38,6 +38,21 @@ from docdown.workdir import WorkDir, WorkDirError
 @click.option("--table-extraction/--no-table-extraction", default=None, help="Enable table extraction")
 @click.option("--llm-cleanup/--no-llm-cleanup", default=None, help="Enable LLM cleanup pipeline")
 @click.option("--llm-model", type=str, default=None, help="LLM model identifier")
+@click.option(
+    "--heuristic-numbered-headings/--no-heuristic-numbered-headings",
+    default=None,
+    help="Promote numbered section-title lines to headings during cleanup",
+)
+@click.option(
+    "--heuristic-titlecase-headings/--no-heuristic-titlecase-headings",
+    default=None,
+    help="Promote probable title-case section lines to headings during cleanup",
+)
+@click.option(
+    "--heuristic-allcaps-headings/--no-heuristic-allcaps-headings",
+    default=None,
+    help="Promote probable ALL CAPS section lines to headings during cleanup",
+)
 @click.option("--toc-depth", type=click.IntRange(1, 6), default=None, help="TOC maximum heading depth (1-6)")
 @click.option(
     "--log-level",
@@ -59,6 +74,9 @@ def main(
     table_extraction,
     llm_cleanup,
     llm_model,
+    heuristic_numbered_headings,
+    heuristic_titlecase_headings,
+    heuristic_allcaps_headings,
     toc_depth,
     log_level,
     min_output_ratio,
@@ -77,6 +95,9 @@ def main(
         "table_extraction": table_extraction,
         "llm_cleanup": llm_cleanup,
         "llm_model": llm_model,
+        "heuristic_numbered_headings": heuristic_numbered_headings,
+        "heuristic_titlecase_headings": heuristic_titlecase_headings,
+        "heuristic_allcaps_headings": heuristic_allcaps_headings,
         "toc_depth": toc_depth,
         "log_level": log_level,
         "validation": {
@@ -169,6 +190,9 @@ def main(
                 markdown_path,
                 logger=logger,
                 chunk_number=result.chunk_number,
+                heuristic_numbered_headings=cfg.heuristic_numbered_headings,
+                heuristic_titlecase_headings=cfg.heuristic_titlecase_headings,
+                heuristic_allcaps_headings=cfg.heuristic_allcaps_headings,
             )
         except (PandocError, CleanupError) as exc:
             logger.error("Markdown conversion/cleanup failed for chunk-%04d: %s", result.chunk_number, exc)
@@ -189,6 +213,12 @@ def main(
         )
     except MergeError as exc:
         raise click.ClickException(str(exc)) from exc
+
+    log_heading_diagnostics(
+        work_dir.markdown_dir,
+        work_dir.merged_markdown(),
+        logger=logger,
+    )
 
     try:
         generate_toc(

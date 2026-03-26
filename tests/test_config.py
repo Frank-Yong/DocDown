@@ -18,6 +18,9 @@ def test_config_defaults_without_file():
     assert cfg.fallback_extractor == "pdfminer"
     assert cfg.table_extraction is True
     assert cfg.llm_cleanup is False
+    assert cfg.heuristic_numbered_headings is True
+    assert cfg.heuristic_titlecase_headings is False
+    assert cfg.heuristic_allcaps_headings is False
     assert cfg.toc_depth == 3
     assert cfg.log_level == "INFO"
     assert cfg.validation.min_output_ratio == 0.01
@@ -45,6 +48,9 @@ def test_config_loads_from_yaml(tmp_path):
                 "table_extraction: false",
                 "llm_cleanup: true",
                 "llm_model: gpt-4o-mini",
+                "heuristic_numbered_headings: false",
+                "heuristic_titlecase_headings: true",
+                "heuristic_allcaps_headings: true",
                 "toc_depth: 4",
                 "log_level: DEBUG",
                 "validation:",
@@ -67,6 +73,9 @@ def test_config_loads_from_yaml(tmp_path):
     assert cfg.table_extraction is False
     assert cfg.llm_cleanup is True
     assert cfg.llm_model == "gpt-4o-mini"
+    assert cfg.heuristic_numbered_headings is False
+    assert cfg.heuristic_titlecase_headings is True
+    assert cfg.heuristic_allcaps_headings is True
     assert cfg.toc_depth == 4
     assert cfg.log_level == "DEBUG"
     assert cfg.validation.min_output_ratio == 0.02
@@ -96,6 +105,9 @@ def test_cli_overrides_config_values(tmp_path):
             "workdir": "./from-cli",
             "chunk_size": 20,
             "parallel_workers": 3,
+            "heuristic_numbered_headings": False,
+            "heuristic_titlecase_headings": True,
+            "heuristic_allcaps_headings": True,
             "toc_depth": 2,
             "log_level": "debug",
             "validation": {
@@ -107,6 +119,9 @@ def test_cli_overrides_config_values(tmp_path):
     assert str(cfg.workdir) == "from-cli"
     assert cfg.chunk_size == 20
     assert cfg.parallel_workers == 3
+    assert cfg.heuristic_numbered_headings is False
+    assert cfg.heuristic_titlecase_headings is True
+    assert cfg.heuristic_allcaps_headings is True
     assert cfg.toc_depth == 2
     assert cfg.log_level == "DEBUG"
     assert cfg.validation.min_output_ratio == 0.1

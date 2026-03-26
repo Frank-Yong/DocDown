@@ -68,6 +68,7 @@ Combine chunks and produce final output.
 | [6.1](task-6.1-chunk-merging.md) | Chunk merging | 4.2 |
 | [6.2](task-6.2-toc-generation.md) | TOC generation | 6.1 |
 | [6.3](task-6.3-pre-split-toc-extraction.md) | Pre-split TOC extraction (optional) | 2.1 |
+| [6.4](task-6.4-markdown-structure-and-toc-hardening.md) | Markdown structure and TOC hardening (ad-hoc) | 4.2, 6.2 |
 
 ### Stage 7 — Parallel Processing
 
