@@ -1,1 +1,116 @@
-"""Tests for merging and TOC generation."""
+"""Tests for Stage 6.1 chunk merging."""
+
+from __future__ import annotations
+
+from unittest.mock import Mock
+
+import pytest
+
+from docdown.stages.merge import MergeError, merge_chunks
+
+
+def test_merge_chunks_concatenates_in_numeric_order(tmp_path):
+    markdown_dir = tmp_path / "markdown"
+    markdown_dir.mkdir()
+    (markdown_dir / "chunk-0001.md").write_text("first", encoding="utf-8")
+    (markdown_dir / "chunk-0002.md").write_text("second", encoding="utf-8")
+    (markdown_dir / "chunk-0003.md").write_text("third", encoding="utf-8")
+
+    output_path = tmp_path / "merged.md"
+    merge_chunks(markdown_dir, output_path, 3)
+
+    assert output_path.read_text(encoding="utf-8") == "first\n\n---\n\nsecond\n\n---\n\nthird"
+
+
+def test_merge_chunks_inserts_horizontal_rule_between_all_chunks(tmp_path):
+    markdown_dir = tmp_path / "markdown"
+    markdown_dir.mkdir()
+    (markdown_dir / "chunk-0001.md").write_text("a", encoding="utf-8")
+    (markdown_dir / "chunk-0002.md").write_text("b", encoding="utf-8")
+    (markdown_dir / "chunk-0003.md").write_text("c", encoding="utf-8")
+
+    output_path = tmp_path / "merged.md"
+    merge_chunks(markdown_dir, output_path, 3)
+
+    merged = output_path.read_text(encoding="utf-8")
+    assert merged.count("\n\n---\n\n") == 2
+
+
+def test_merge_chunks_writes_placeholder_for_missing_or_empty_chunks(tmp_path):
+    markdown_dir = tmp_path / "markdown"
+    markdown_dir.mkdir()
+    (markdown_dir / "chunk-0001.md").write_text("ok", encoding="utf-8")
+    (markdown_dir / "chunk-0003.md").write_text("", encoding="utf-8")
+
+    output_path = tmp_path / "merged.md"
+    merge_chunks(markdown_dir, output_path, 3)
+
+    merged = output_path.read_text(encoding="utf-8")
+    assert "ok" in merged
+    assert "<!-- chunk-0002: extraction failed -->" in merged
+    assert "<!-- chunk-0003: extraction failed -->" in merged
+
+
+def test_merge_chunks_normalizes_trailing_newlines_around_separators(tmp_path):
+    markdown_dir = tmp_path / "markdown"
+    markdown_dir.mkdir()
+    (markdown_dir / "chunk-0001.md").write_text("first\n", encoding="utf-8")
+    (markdown_dir / "chunk-0002.md").write_text("second\n\n", encoding="utf-8")
+
+    output_path = tmp_path / "merged.md"
+    merge_chunks(markdown_dir, output_path, 2)
+
+    assert output_path.read_text(encoding="utf-8") == "first\n\n---\n\nsecond"
+
+
+def test_merge_chunks_logs_line_count_and_file_size(tmp_path):
+    markdown_dir = tmp_path / "markdown"
+    markdown_dir.mkdir()
+    (markdown_dir / "chunk-0001.md").write_text("line1\nline2\n", encoding="utf-8")
+
+    output_path = tmp_path / "merged.md"
+    logger = Mock()
+    merge_chunks(markdown_dir, output_path, 1, logger=logger)
+
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0
+    logger.info.assert_called_once()
+    logged_message = logger.info.call_args.args[0]
+    assert "Merged markdown output: lines=" in logged_message
+    assert "size_bytes=" in logged_message
+
+
+def test_merge_chunks_rejects_non_file_chunk_paths(tmp_path):
+    markdown_dir = tmp_path / "markdown"
+    markdown_dir.mkdir()
+    (markdown_dir / "chunk-0001.md").mkdir()
+
+    with pytest.raises(MergeError, match="not a file"):
+        merge_chunks(markdown_dir, tmp_path / "merged.md", 1)
+
+
+def test_merge_chunks_treats_whitespace_only_chunks_as_failed(tmp_path):
+    markdown_dir = tmp_path / "markdown"
+    markdown_dir.mkdir()
+    (markdown_dir / "chunk-0001.md").write_text("   \n\t\n", encoding="utf-8")
+
+    output_path = tmp_path / "merged.md"
+    merge_chunks(markdown_dir, output_path, 1)
+
+    merged = output_path.read_text(encoding="utf-8")
+    assert merged == "<!-- chunk-0001: extraction failed -->"
+
+
+def test_merge_chunks_rejects_missing_markdown_dir(tmp_path):
+    missing_dir = tmp_path / "missing"
+
+    with pytest.raises(MergeError, match="Markdown directory not found"):
+        merge_chunks(missing_dir, tmp_path / "merged.md", 1)
+
+
+def test_merge_chunks_rejects_markdown_path_that_is_not_directory(tmp_path):
+    markdown_file = tmp_path / "markdown-file"
+    markdown_file.write_text("not a dir", encoding="utf-8")
+
+    with pytest.raises(MergeError, match="Markdown path is not a directory"):
+        merge_chunks(markdown_file, tmp_path / "merged.md", 1)
