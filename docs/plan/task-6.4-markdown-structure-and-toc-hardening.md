@@ -16,19 +16,29 @@ External validation runs completed successfully, but generated `final.md` files 
 
 ## Acceptance Criteria
 
-- [ ] Add heading-coverage diagnostics for chunk markdown and merged markdown (for example: heading counts by level, chunks without headings).
-- [ ] Improve cleanup heading reconstruction heuristics so section-like lines are promoted to headings where safe.
-- [ ] Keep current Pandoc TOC path, but add a guaranteed-visible TOC insertion fallback when no TOC block is emitted.
-- [ ] Ensure fallback TOC links are GitHub-anchor compatible and respect configured depth.
-- [ ] Add tests that cover:
-  - [ ] low-heading external-like markdown input
-  - [ ] Pandoc success without visible TOC output
-  - [ ] guaranteed fallback insertion at document top
-- [ ] Re-run at least two external documents and verify `final.md` contains a visible TOC section.
-- [ ] Update run logging to distinguish:
-  - [ ] heading candidates detected
-  - [ ] TOC entries emitted
-  - [ ] TOC mode used (`pandoc` or `python-fallback`)
+- [x] Add heading-coverage diagnostics for chunk markdown and merged markdown (for example: heading counts by level, chunks without headings).
+- [x] Improve cleanup heading reconstruction heuristics so section-like lines are promoted to headings where safe.
+- [x] Keep current Pandoc TOC path, but add a guaranteed-visible TOC insertion fallback when no TOC block is emitted.
+- [x] Ensure fallback TOC links are GitHub-anchor compatible and respect configured depth.
+- [x] Add tests that cover:
+  - [x] low-heading external-like markdown input
+  - [x] Pandoc success without visible TOC output
+  - [x] guaranteed fallback insertion at document top
+- [x] Re-run at least two external documents and verify `final.md` contains a visible TOC section.
+- [x] Update run logging to distinguish:
+  - [x] heading candidates detected
+  - [x] TOC entries emitted
+  - [x] TOC mode used (`pandoc` or `python-fallback`)
+
+Implemented in:
+- `docdown/stages/toc.py`
+- `docdown/stages/cleanup.py`
+- `docdown/cli.py`
+- `docdown/config.py`
+- `tests/test_toc.py`
+- `tests/test_cleanup.py`
+- `tests/test_cli.py`
+- `tests/test_config.py`
 
 ## Proposed Scope
 
@@ -60,8 +70,10 @@ Potential files:
 
 Validation artifacts:
 
-- `runs/external-toc-001/final.md`
-- `runs/external-toc-002/final.md`
+- `runs/external-toc-6.4-final-001/final.md`
+- `runs/external-toc-6.4-final-002/final.md`
+- `runs/external-toc-6.4-final-001/run.log`
+- `runs/external-toc-6.4-final-002/run.log`
 
 ## Out of Scope
 
