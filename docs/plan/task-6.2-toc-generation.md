@@ -10,43 +10,95 @@ Generate a Table of Contents from the merged Markdown headings using Pandoc.
 
 ## Acceptance Criteria
 
-- [ ] Pandoc generates a TOC from `merged.md` headings up to depth 3 (`#`, `##`, `###`).
-- [ ] TOC is inserted at the top of the document.
-- [ ] Output is written to `workdir/final.md`.
-- [ ] If Pandoc fails, `merged.md` is copied to `final.md` without a TOC (degraded but usable).
-- [ ] TOC depth is configurable (default: 3).
-- [ ] Log the number of TOC entries generated.
-- [ ] Unit test verifies TOC is present in output for a document with headings.
+- [x] Pandoc generates a TOC from `merged.md` headings up to depth 3 (`#`, `##`, `###`).
+- [x] TOC is inserted at the top of the document.
+- [x] Output is written to `workdir/final.md`.
+- [x] If Pandoc fails, `merged.md` is copied to `final.md` without a TOC (degraded but usable).
+- [x] TOC depth is configurable (default: 3).
+- [x] Log the number of TOC entries generated.
+- [x] Unit test verifies TOC is present in output for a document with headings.
+
+Implemented in:
+- `docdown/stages/toc.py`
+- `docdown/cli.py`
+- `docdown/config.py`
+- `tests/test_toc.py`
+- `tests/test_cli.py`
+- `tests/test_config.py`
 
 ## Implementation Notes
 
-### Command
+### Implementation
 
 ```bash
 pandoc merged.md -f gfm -t gfm --toc --toc-depth=3 -o final.md
 ```
 
-### Alternative: Python-based TOC
+TOC generation now runs in a dedicated stage (`docdown/stages/toc.py`) with the following behavior:
 
-If Pandoc's `--toc` for GFM output is insufficient (it may not produce GFM-compatible link anchors), implement a simple Python TOC generator:
+- Primary path: invoke Pandoc with `--toc` and configurable `--toc-depth`.
+- Fallback path: if Pandoc execution fails (missing binary or non-zero exit), copy `merged.md` to `final.md` and log a degraded-mode warning.
+- Metrics: log TOC entry count based on headings found in `merged.md` up to configured depth.
 
 ```python
-import re
+from docdown.stages.toc import generate_toc
 
-def generate_toc(text, max_depth=3):
-    toc_lines = []
-    for match in re.finditer(r"^(#{1,6}) (.+)$", text, re.MULTILINE):
-        level = len(match.group(1))
-        if level > max_depth:
-            continue
-        title = match.group(2).strip()
-        anchor = re.sub(r"[^\w\s-]", "", title.lower()).replace(" ", "-")
-        indent = "  " * (level - 1)
-        toc_lines.append(f"{indent}- [{title}](#{anchor})")
-    return "\n".join(toc_lines)
+generate_toc(
+    work_dir.merged_markdown(),
+    work_dir.final_markdown(),
+    toc_depth=cfg.toc_depth,
+    logger=logger,
+)
 ```
 
-Decide at implementation time which approach produces better results.
+### Artifact Class Diagram
+
+```mermaid
+classDiagram
+    class TocError {
+        <<exception>>
+    }
+
+    class TocStageModule {
+        <<module: docdown/stages/toc.py>>
+        +generate_toc(merged_path, final_path, toc_depth, logger) Path
+    }
+
+    class CliModule {
+        <<module: docdown/cli.py>>
+        +main(...)
+    }
+
+    class Config {
+        <<module: docdown/config.py>>
+        +toc_depth int
+    }
+
+    class WorkDir {
+        <<module: docdown/workdir.py>>
+        +merged_markdown() Path
+        +final_markdown() Path
+    }
+
+    class TestToc {
+        <<tests/test_toc.py>>
+        +pandoc success test
+        +fallback copy test
+        +depth validation test
+    }
+
+    class TestCli {
+        <<tests/test_cli.py>>
+        +TOC error propagation test
+    }
+
+    CliModule ..> Config : reads toc_depth
+    CliModule ..> WorkDir : resolves merged/final paths
+    CliModule ..> TocStageModule : calls after merge
+    TocStageModule ..> TocError : raises on invalid/fallback-copy failures
+    TestToc ..> TocStageModule : verifies behavior
+    TestCli ..> CliModule : verifies integration
+```
 
 ## References
 

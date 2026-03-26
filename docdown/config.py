@@ -40,6 +40,7 @@ class Config:
     table_extraction: bool = True
     llm_cleanup: bool = False
     llm_model: str | None = None
+    toc_depth: int = 3
     log_level: str = "INFO"
     validation: ValidationConfig = field(default_factory=ValidationConfig)
 
@@ -75,6 +76,7 @@ def _default_data() -> dict[str, Any]:
         "table_extraction": defaults.table_extraction,
         "llm_cleanup": defaults.llm_cleanup,
         "llm_model": defaults.llm_model,
+        "toc_depth": defaults.toc_depth,
         "log_level": defaults.log_level,
         "validation": {
             "min_output_ratio": defaults.validation.min_output_ratio,
@@ -162,6 +164,7 @@ def _build_and_validate(data: dict[str, Any]) -> Config:
             table_extraction=_require_bool(data["table_extraction"], "table_extraction"),
             llm_cleanup=_require_bool(data["llm_cleanup"], "llm_cleanup"),
             llm_model=str(data["llm_model"]) if data["llm_model"] is not None else None,
+            toc_depth=_require_int(data["toc_depth"], "toc_depth"),
             log_level=str(data["log_level"]).upper(),
             validation=validation_cfg,
         )
@@ -197,6 +200,8 @@ def _validate_semantics(cfg: Config) -> None:
         raise ConfigError(f"extractor must be one of: {sorted(_VALID_EXTRACTORS)}")
     if cfg.fallback_extractor not in _VALID_EXTRACTORS:
         raise ConfigError(f"fallback_extractor must be one of: {sorted(_VALID_EXTRACTORS)}")
+    if cfg.toc_depth < 1 or cfg.toc_depth > 6:
+        raise ConfigError("toc_depth must be between 1 and 6.")
     if cfg.log_level not in _VALID_LOG_LEVELS:
         raise ConfigError(f"log_level must be one of: {sorted(_VALID_LOG_LEVELS)}")
     if not math.isfinite(cfg.validation.min_output_ratio):

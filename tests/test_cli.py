@@ -10,6 +10,7 @@ from docdown.stages.convert import PandocError
 from docdown.stages.merge import MergeError
 from docdown.stages.split import PdfSplitError
 from docdown.stages.split import PdfValidationError
+from docdown.stages.toc import TocError
 
 
 def test_cli_shows_version(tmp_path, monkeypatch):
@@ -244,6 +245,44 @@ def test_cli_surfaces_merge_errors(tmp_path, monkeypatch):
 
     assert result.exit_code != 0
     assert "merge failed" in result.output
+
+
+def test_cli_surfaces_toc_generation_errors(tmp_path, monkeypatch):
+    dummy_pdf = tmp_path / "test.pdf"
+    dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+    extracted_path = tmp_path / "out" / "extracted" / "chunk-0001.xml"
+
+    monkeypatch.setattr(
+        "docdown.cli.validate_pdf",
+        lambda *args, **kwargs: SimpleNamespace(page_count=1, file_size_bytes=dummy_pdf.stat().st_size),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.split_pdf",
+        lambda *args, **kwargs: SimpleNamespace(chunk_count=1, chunk_paths=(tmp_path / "out" / "chunks" / "chunk-0001.pdf",)),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.orchestrate_extraction",
+        lambda *args, **kwargs: [SimpleNamespace(chunk_number=1, success=True, output_path=extracted_path)],
+    )
+    monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
+
+    def _fake_convert(input_path, output_path, **kwargs):
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text("# ok", encoding="utf-8")
+        return Path(output_path)
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
+
+    def _raise_toc_error(*args, **kwargs):
+        raise TocError("toc failed")
+
+    monkeypatch.setattr("docdown.cli.generate_toc", _raise_toc_error)
+
+    runner = CliRunner()
+    result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
+
+    assert result.exit_code != 0
+    assert "toc failed" in result.output
 
 
 def test_cli_autoloads_repo_config_when_flag_omitted(tmp_path, monkeypatch):
