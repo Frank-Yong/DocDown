@@ -10,6 +10,7 @@ from docdown.stages.convert import PandocError, convert_to_markdown, ensure_pand
 from docdown.stages.extract import orchestrate_extraction
 from docdown.stages.merge import MergeError, merge_chunks
 from docdown.stages.split import PdfSplitError, PdfValidationError, split_pdf, validate_pdf
+from docdown.stages.toc import TocError, generate_toc
 from docdown.utils.logging import configure_logging
 from docdown.workdir import WorkDir, WorkDirError
 
@@ -37,6 +38,7 @@ from docdown.workdir import WorkDir, WorkDirError
 @click.option("--table-extraction/--no-table-extraction", default=None, help="Enable table extraction")
 @click.option("--llm-cleanup/--no-llm-cleanup", default=None, help="Enable LLM cleanup pipeline")
 @click.option("--llm-model", type=str, default=None, help="LLM model identifier")
+@click.option("--toc-depth", type=click.IntRange(1, 6), default=None, help="TOC maximum heading depth (1-6)")
 @click.option(
     "--log-level",
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "WARN"], case_sensitive=False),
@@ -57,6 +59,7 @@ def main(
     table_extraction,
     llm_cleanup,
     llm_model,
+    toc_depth,
     log_level,
     min_output_ratio,
     max_empty_chunks,
@@ -74,6 +77,7 @@ def main(
         "table_extraction": table_extraction,
         "llm_cleanup": llm_cleanup,
         "llm_model": llm_model,
+        "toc_depth": toc_depth,
         "log_level": log_level,
         "validation": {
             "min_output_ratio": min_output_ratio,
@@ -184,6 +188,16 @@ def main(
             logger=logger,
         )
     except MergeError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    try:
+        generate_toc(
+            work_dir.merged_markdown(),
+            work_dir.final_markdown(),
+            toc_depth=cfg.toc_depth,
+            logger=logger,
+        )
+    except TocError as exc:
         raise click.ClickException(str(exc)) from exc
 
 

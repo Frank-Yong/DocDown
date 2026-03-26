@@ -18,6 +18,7 @@ def test_config_defaults_without_file():
     assert cfg.fallback_extractor == "pdfminer"
     assert cfg.table_extraction is True
     assert cfg.llm_cleanup is False
+    assert cfg.toc_depth == 3
     assert cfg.log_level == "INFO"
     assert cfg.validation.min_output_ratio == 0.01
     assert cfg.validation.max_empty_chunks == 0
@@ -44,6 +45,7 @@ def test_config_loads_from_yaml(tmp_path):
                 "table_extraction: false",
                 "llm_cleanup: true",
                 "llm_model: gpt-4o-mini",
+                "toc_depth: 4",
                 "log_level: DEBUG",
                 "validation:",
                 "  min_output_ratio: 0.02",
@@ -65,6 +67,7 @@ def test_config_loads_from_yaml(tmp_path):
     assert cfg.table_extraction is False
     assert cfg.llm_cleanup is True
     assert cfg.llm_model == "gpt-4o-mini"
+    assert cfg.toc_depth == 4
     assert cfg.log_level == "DEBUG"
     assert cfg.validation.min_output_ratio == 0.02
     assert cfg.validation.max_empty_chunks == 1
@@ -78,6 +81,7 @@ def test_cli_overrides_config_values(tmp_path):
                 "workdir: ./from-file",
                 "chunk_size: 100",
                 "parallel_workers: 8",
+                "toc_depth: 6",
                 "log_level: ERROR",
                 "validation:",
                 "  min_output_ratio: 0.05",
@@ -92,6 +96,7 @@ def test_cli_overrides_config_values(tmp_path):
             "workdir": "./from-cli",
             "chunk_size": 20,
             "parallel_workers": 3,
+            "toc_depth": 2,
             "log_level": "debug",
             "validation": {
                 "min_output_ratio": 0.1,
@@ -102,6 +107,7 @@ def test_cli_overrides_config_values(tmp_path):
     assert str(cfg.workdir) == "from-cli"
     assert cfg.chunk_size == 20
     assert cfg.parallel_workers == 3
+    assert cfg.toc_depth == 2
     assert cfg.log_level == "DEBUG"
     assert cfg.validation.min_output_ratio == 0.1
 
@@ -115,6 +121,9 @@ def test_invalid_config_raises_clear_error():
 
     with pytest.raises(ConfigError, match="log_level must be one of"):
         load_config(cli_overrides={"log_level": "VERBOSE"})
+
+    with pytest.raises(ConfigError, match="toc_depth must be between 1 and 6"):
+        load_config(cli_overrides={"toc_depth": 0})
 
 
 def test_string_boolean_values_are_rejected(tmp_path):
