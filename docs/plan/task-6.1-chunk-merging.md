@@ -80,7 +80,7 @@ classDiagram
 
     class MergeStageModule {
         <<module: docdown/stages/merge.py>>
-        +merge_chunks(markdown_dir, output_path, total_chunks, logger) Path
+        +merge_chunks(markdown_dir, output_path, total_chunks, *, logger=None) Path
     }
 
     class CliModule {
