@@ -32,6 +32,11 @@ def merge_chunks(
     target = Path(output_path)
     active_logger = logger or get_logger()
 
+    if not source_dir.exists():
+        raise MergeError(f"Markdown directory not found: {source_dir}")
+    if not source_dir.is_dir():
+        raise MergeError(f"Markdown path is not a directory: {source_dir}")
+
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         newline_count = 0

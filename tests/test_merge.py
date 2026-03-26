@@ -99,3 +99,18 @@ def test_merge_chunks_treats_whitespace_only_chunks_as_failed(tmp_path):
 
     merged = output_path.read_text(encoding="utf-8")
     assert merged == "<!-- chunk-0001: extraction failed -->"
+
+
+def test_merge_chunks_rejects_missing_markdown_dir(tmp_path):
+    missing_dir = tmp_path / "missing"
+
+    with pytest.raises(MergeError, match="Markdown directory not found"):
+        merge_chunks(missing_dir, tmp_path / "merged.md", 1)
+
+
+def test_merge_chunks_rejects_markdown_path_that_is_not_directory(tmp_path):
+    markdown_file = tmp_path / "markdown-file"
+    markdown_file.write_text("not a dir", encoding="utf-8")
+
+    with pytest.raises(MergeError, match="Markdown path is not a directory"):
+        merge_chunks(markdown_file, tmp_path / "merged.md", 1)
