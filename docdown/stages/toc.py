@@ -67,12 +67,26 @@ def generate_toc(
     try:
         result = subprocess.run(command, capture_output=True, text=True, check=False)
     except OSError as exc:
-        _copy_without_toc(source, target, active_logger, reason=f"pandoc unavailable: {exc}")
+        _copy_without_toc(
+            source,
+            target,
+            active_logger,
+            reason=f"pandoc unavailable: {exc}",
+            entry_count=entry_count,
+            toc_depth=toc_depth,
+        )
         return target
 
     if result.returncode != 0:
         diagnostics = _combined_output(result)
-        _copy_without_toc(source, target, active_logger, reason=f"pandoc failed: {diagnostics}")
+        _copy_without_toc(
+            source,
+            target,
+            active_logger,
+            reason=f"pandoc failed: {diagnostics}",
+            entry_count=entry_count,
+            toc_depth=toc_depth,
+        )
         return target
 
     active_logger.info(
@@ -84,7 +98,15 @@ def generate_toc(
     return target
 
 
-def _copy_without_toc(source: Path, target: Path, logger: LogLike, *, reason: str) -> None:
+def _copy_without_toc(
+    source: Path,
+    target: Path,
+    logger: LogLike,
+    *,
+    reason: str,
+    entry_count: int,
+    toc_depth: int,
+) -> None:
     """Fallback to a direct merged->final copy when pandoc TOC generation is unavailable."""
 
     try:
@@ -93,7 +115,7 @@ def _copy_without_toc(source: Path, target: Path, logger: LogLike, *, reason: st
         raise TocError(f"TOC fallback copy failed from {source} to {target}: {exc}") from exc
 
     logger.warning("TOC generation degraded; copied merged markdown without TOC: %s", reason)
-    logger.info("TOC generation complete: entries=%s depth=%s path=%s", 0, "-", target)
+    logger.info("TOC generation complete: entries=%s depth=%s path=%s", entry_count, toc_depth, target)
 
 
 def _count_headings_for_toc(markdown_lines: Iterable[str] | str, toc_depth: int) -> int:
