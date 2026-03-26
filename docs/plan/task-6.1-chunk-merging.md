@@ -67,6 +67,8 @@ def _chunk_part(markdown_dir, chunk_number):
         stat_info = chunk_path.stat()
     except FileNotFoundError:
         return f"<!-- chunk-{chunk_number:04d}: extraction failed -->"
+    except OSError as exc:
+        raise MergeError(f"Failed reading chunk markdown {chunk_path}: {exc}") from exc
 
     if not stat.S_ISREG(stat_info.st_mode):
         raise MergeError(f"Chunk markdown path is not a file: {chunk_path}")
@@ -74,7 +76,11 @@ def _chunk_part(markdown_dir, chunk_number):
     if stat_info.st_size == 0:
         return f"<!-- chunk-{chunk_number:04d}: extraction failed -->"
 
-    text = chunk_path.read_text(encoding="utf-8").rstrip("\r\n")
+    try:
+        text = chunk_path.read_text(encoding="utf-8").rstrip("\r\n")
+    except OSError as exc:
+        raise MergeError(f"Failed reading chunk markdown {chunk_path}: {exc}") from exc
+
     return text if text.strip() else f"<!-- chunk-{chunk_number:04d}: extraction failed -->"
 ```
 
