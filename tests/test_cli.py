@@ -44,6 +44,7 @@ def test_cli_shows_version(tmp_path, monkeypatch):
         return Path(output_path)
 
     monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
+    monkeypatch.setattr("docdown.cli.generate_toc", lambda *args, **kwargs: Path(args[1]))
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
@@ -107,6 +108,7 @@ def test_cli_accepts_log_level_flag(tmp_path, monkeypatch):
         return Path(output_path)
 
     monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
+    monkeypatch.setattr("docdown.cli.generate_toc", lambda *args, **kwargs: Path(args[1]))
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out"), "--log-level", "debug"])
@@ -340,6 +342,7 @@ def test_cli_autoloads_repo_config_when_flag_omitted(tmp_path, monkeypatch):
         return Path(output_path)
 
     monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
+    monkeypatch.setattr("docdown.cli.generate_toc", lambda *args, **kwargs: Path(args[1]))
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
@@ -390,6 +393,7 @@ def test_cli_uses_explicit_config_path_when_provided(tmp_path, monkeypatch):
         return Path(output_path)
 
     monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
+    monkeypatch.setattr("docdown.cli.generate_toc", lambda *args, **kwargs: Path(args[1]))
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out"), "--config", str(explicit_config)])
