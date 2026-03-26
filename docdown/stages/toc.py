@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+from typing import Iterable
 
 from docdown.utils.logging import get_logger, log_tool_command
 
@@ -38,11 +39,10 @@ def generate_toc(
         raise TocError(f"Merged markdown input not found: {source}")
 
     try:
-        merged_text = source.read_text(encoding="utf-8")
+        with source.open("r", encoding="utf-8", newline="") as handle:
+            entry_count = _count_headings_for_toc(handle, toc_depth)
     except OSError as exc:
         raise TocError(f"Failed reading merged markdown {source}: {exc}") from exc
-
-    entry_count = _count_headings_for_toc(merged_text, toc_depth)
 
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -96,12 +96,13 @@ def _copy_without_toc(source: Path, target: Path, logger: LogLike, *, reason: st
     logger.info("TOC generation complete: entries=%s depth=%s path=%s", 0, "-", target)
 
 
-def _count_headings_for_toc(markdown_text: str, toc_depth: int) -> int:
+def _count_headings_for_toc(markdown_lines: Iterable[str] | str, toc_depth: int) -> int:
     """Count ATX headings eligible for TOC inclusion up to the requested depth."""
 
     count = 0
     in_fenced_block = False
-    for line in markdown_text.splitlines():
+    lines = markdown_lines.splitlines() if isinstance(markdown_lines, str) else markdown_lines
+    for line in lines:
         if line.startswith("```") or line.startswith("~~~"):
             in_fenced_block = not in_fenced_block
             continue
