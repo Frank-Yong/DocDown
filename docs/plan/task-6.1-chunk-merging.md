@@ -37,26 +37,38 @@ class MergeError(ValueError):
     pass
 
 def merge_chunks(markdown_dir, output_path, total_chunks, *, logger=None):
+    if total_chunks < 1:
+        raise MergeError(f"total_chunks must be >= 1, got {total_chunks}")
+
     source_dir = Path(markdown_dir)
     target = Path(output_path)
     active_logger = logger or get_logger()
-    target.parent.mkdir(parents=True, exist_ok=True)
 
-    newline_count = 0
-    wrote_any = False
-    with target.open("w", encoding="utf-8", newline="") as f:
-        for i in range(1, total_chunks + 1):
-            part = _chunk_part(source_dir, i)  # returns content or placeholder
-            if wrote_any:
-                separator = "\n\n---\n\n"
-                f.write(separator)
-                newline_count += separator.count("\n")
-            f.write(part)
-            newline_count += part.count("\n")
-            wrote_any = True
+    if not source_dir.exists():
+        raise MergeError(f"Markdown directory not found: {source_dir}")
+    if not source_dir.is_dir():
+        raise MergeError(f"Markdown path is not a directory: {source_dir}")
+
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        newline_count = 0
+        wrote_any = False
+        with target.open("w", encoding="utf-8", newline="") as f:
+            for i in range(1, total_chunks + 1):
+                part = _chunk_part(source_dir, i)  # returns content or placeholder
+                if wrote_any:
+                    separator = "\n\n---\n\n"
+                    f.write(separator)
+                    newline_count += separator.count("\n")
+                f.write(part)
+                newline_count += part.count("\n")
+                wrote_any = True
+
+        file_size = target.stat().st_size
+    except OSError as exc:
+        raise MergeError(f"Failed writing merged markdown to {target}: {exc}") from exc
 
     line_count = newline_count + (1 if wrote_any else 0)
-    file_size = target.stat().st_size
     active_logger.info("Merged markdown output: lines=%s size_bytes=%s path=%s", line_count, file_size, target)
     return target
 
