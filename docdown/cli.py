@@ -194,7 +194,7 @@ def main(
         generate_toc(
             work_dir.merged_markdown(),
             work_dir.final_markdown(),
-            toc_depth=getattr(cfg, "toc_depth", 3),
+            toc_depth=cfg.toc_depth,
             logger=logger,
         )
     except TocError as exc:

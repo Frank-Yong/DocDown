@@ -315,6 +315,7 @@ def test_cli_autoloads_repo_config_when_flag_omitted(tmp_path, monkeypatch):
             extractor="pdfminer",
             fallback_extractor="pdfminer",
             grobid_url="http://localhost:8070",
+            toc_depth=3,
             log_level="INFO",
         )
 
@@ -364,6 +365,7 @@ def test_cli_uses_explicit_config_path_when_provided(tmp_path, monkeypatch):
             extractor="pdfminer",
             fallback_extractor="pdfminer",
             grobid_url="http://localhost:8070",
+            toc_depth=3,
             log_level="INFO",
         )
 
