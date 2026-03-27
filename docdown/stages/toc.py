@@ -274,13 +274,20 @@ def _ensure_visible_toc(target_path: Path, entries: list[tuple[int, str, str]]) 
 
 def _has_visible_toc_near_top(markdown_text: str, *, max_scan_lines: int = 120) -> bool:
     lines = markdown_text.splitlines()[:max_scan_lines]
-    link_bullets = 0
+    toc_marker_seen = False
     for line in lines:
+        stripped = line.strip()
+        if re.match(r"^#{1,6}\s+table of contents\s*$", stripped, flags=re.IGNORECASE):
+            toc_marker_seen = True
+        elif re.match(r"^\[toc\]$", stripped, flags=re.IGNORECASE):
+            toc_marker_seen = True
+        elif re.search(r"<div\s+id=[\"']toc[\"']", stripped, flags=re.IGNORECASE):
+            toc_marker_seen = True
+
         if re.match(r"^\s*[-*]\s+\[[^\]]+\]\(#[^)]+\)\s*$", line):
-            link_bullets += 1
-            if link_bullets >= 2:
-                return True
-    return False
+            return True
+
+    return toc_marker_seen
 
 
 def _build_python_toc_block(entries: list[tuple[int, str, str]]) -> str:

@@ -82,6 +82,45 @@ def test_generate_toc_inserts_python_fallback_when_pandoc_output_has_no_toc(tmp_
     assert logger.info.call_args.args[1] == "python-fallback"
 
 
+def test_generate_toc_accepts_single_entry_pandoc_toc(tmp_path, monkeypatch):
+    merged = tmp_path / "merged.md"
+    merged.write_text("# Title\n", encoding="utf-8")
+    final = tmp_path / "final.md"
+
+    def _fake_run(command, capture_output, text, check):
+        final.write_text("## Table of Contents\n\n- [Title](#title)\n\n# Title\n", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr("docdown.stages.toc.subprocess.run", _fake_run)
+
+    logger = Mock()
+    generate_toc(merged, final, toc_depth=3, logger=logger)
+
+    rendered = final.read_text(encoding="utf-8")
+    assert rendered.count("## Table of Contents") == 1
+    assert logger.info.call_args.args[1] == "pandoc"
+
+
+def test_generate_toc_accepts_div_toc_marker_without_duplicate_insertion(tmp_path, monkeypatch):
+    merged = tmp_path / "merged.md"
+    merged.write_text("# Title\n", encoding="utf-8")
+    final = tmp_path / "final.md"
+
+    def _fake_run(command, capture_output, text, check):
+        final.write_text("<div id=\"TOC\"></div>\n\n# Title\n", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr("docdown.stages.toc.subprocess.run", _fake_run)
+
+    logger = Mock()
+    generate_toc(merged, final, toc_depth=3, logger=logger)
+
+    rendered = final.read_text(encoding="utf-8")
+    assert rendered.startswith("<div id=\"TOC\"></div>")
+    assert "## Table of Contents" not in rendered
+    assert logger.info.call_args.args[1] == "pandoc"
+
+
 def test_generate_toc_rejects_invalid_depth(tmp_path):
     merged = tmp_path / "merged.md"
     merged.write_text("# Title\n", encoding="utf-8")
