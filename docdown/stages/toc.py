@@ -190,7 +190,7 @@ def _copy_without_toc(
         raise TocError(f"TOC fallback copy failed from {source} to {target}: {exc}") from exc
 
     logger.warning(
-        "TOC generation degraded; copied merged markdown without TOC: %s (entries=%s depth=%s)",
+        "TOC generation degraded; copied merged markdown after pandoc failure and will evaluate fallback TOC injection: %s (entries=%s depth=%s)",
         reason,
         entry_count,
         toc_depth,
