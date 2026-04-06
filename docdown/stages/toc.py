@@ -93,11 +93,8 @@ def generate_toc(
     if not source.exists() or not source.is_file():
         raise TocError(f"Merged markdown input not found: {source}")
 
-    try:
-        with source.open("r", encoding="utf-8", newline="") as handle:
-            entry_count = _count_headings_for_toc(handle, toc_depth)
-    except OSError as exc:
-        raise TocError(f"Failed reading merged markdown {source}: {exc}") from exc
+    entries = _collect_toc_entries(source, toc_depth)
+    entry_count = len(entries)
 
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -119,7 +116,6 @@ def generate_toc(
     ]
     log_tool_command(command)
 
-    entries = _collect_toc_entries(source, toc_depth)
     try:
         result = subprocess.run(command, capture_output=True, text=True, check=False)
     except OSError as exc:
