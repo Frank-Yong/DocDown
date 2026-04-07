@@ -249,8 +249,9 @@ def _ensure_visible_toc(target_path: Path, entries: list[tuple[int, str, str]]) 
     except OSError as exc:
         raise TocError(f"Failed reading generated markdown {target_path}: {exc}") from exc
 
-    if _has_visible_toc_near_top(content):
-        return "pandoc", len(entries)
+    visible_entries = _count_visible_toc_entries_near_top(content)
+    if visible_entries > 0:
+        return "pandoc", visible_entries
 
     toc_block = _build_python_toc_block(entries)
     if not toc_block:
@@ -269,9 +270,28 @@ def _ensure_visible_toc(target_path: Path, entries: list[tuple[int, str, str]]) 
 
 
 def _has_visible_toc_near_top(markdown_text: str, *, max_scan_lines: int = 120) -> bool:
+    return _count_visible_toc_entries_near_top(markdown_text, max_scan_lines=max_scan_lines) > 0
+
+
+def _count_visible_toc_entries_near_top(markdown_text: str, *, max_scan_lines: int = 120) -> int:
     lines = markdown_text.splitlines()[:max_scan_lines]
     toc_marker_seen = False
-    link_bullets = 0
+    current_run_count = 0
+    current_run_has_marker = False
+    run_counts_with_marker: list[int] = []
+    run_counts_without_marker: list[int] = []
+
+    def _flush_run() -> None:
+        nonlocal current_run_count, current_run_has_marker
+        if current_run_count <= 0:
+            return
+        if current_run_has_marker:
+            run_counts_with_marker.append(current_run_count)
+        else:
+            run_counts_without_marker.append(current_run_count)
+        current_run_count = 0
+        current_run_has_marker = False
+
     for line in lines:
         stripped = line.strip()
         if re.match(r"^#{1,6}\s+table of contents\s*$", stripped, flags=re.IGNORECASE):
@@ -282,15 +302,22 @@ def _has_visible_toc_near_top(markdown_text: str, *, max_scan_lines: int = 120) 
             toc_marker_seen = True
 
         if re.match(r"^\s*[-*]\s+\[[^\]]+\]\(#[^)]+\)\s*$", line):
-            link_bullets += 1
+            if current_run_count == 0:
+                current_run_has_marker = toc_marker_seen
+            current_run_count += 1
+        else:
+            _flush_run()
 
-    if link_bullets >= 2:
-        return True
+    _flush_run()
 
-    if toc_marker_seen and link_bullets >= 1:
-        return True
+    if run_counts_with_marker:
+        return run_counts_with_marker[0]
 
-    return False
+    for count in run_counts_without_marker:
+        if count >= 2:
+            return count
+
+    return 0
 
 
 def _build_python_toc_block(entries: list[tuple[int, str, str]]) -> str:
