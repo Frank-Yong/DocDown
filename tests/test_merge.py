@@ -101,6 +101,18 @@ def test_merge_chunks_treats_whitespace_only_chunks_as_failed(tmp_path):
     assert merged == "<!-- chunk-0001: extraction failed -->"
 
 
+def test_merge_chunks_treats_invalid_utf8_chunks_as_failed(tmp_path):
+    markdown_dir = tmp_path / "markdown"
+    markdown_dir.mkdir()
+    (markdown_dir / "chunk-0001.md").write_bytes(b"\xff\xfe\x00")
+
+    output_path = tmp_path / "merged.md"
+    merge_chunks(markdown_dir, output_path, 1)
+
+    merged = output_path.read_text(encoding="utf-8")
+    assert merged == "<!-- chunk-0001: extraction failed -->"
+
+
 def test_merge_chunks_rejects_missing_markdown_dir(tmp_path):
     missing_dir = tmp_path / "missing"
 
