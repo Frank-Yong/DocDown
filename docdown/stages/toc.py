@@ -372,7 +372,8 @@ def _iter_headings(markdown_lines: Iterable[str] | str, *, toc_depth: int) -> It
         if level > toc_depth:
             continue
 
-        title = match.group(2).strip()
+        # CommonMark allows optional closing '#' runs if preceded by whitespace.
+        title = re.sub(r"[ \t]+#+[ \t]*$", "", match.group(2)).strip()
         if not title:
             continue
         yield level, title

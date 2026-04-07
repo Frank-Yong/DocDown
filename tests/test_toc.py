@@ -239,6 +239,24 @@ def test_python_toc_fallback_preserves_unicode_github_anchors(tmp_path, monkeypa
     assert "- [Café](#café-1)" in rendered
 
 
+def test_python_toc_fallback_trims_commonmark_closing_hashes(tmp_path, monkeypatch):
+    merged = tmp_path / "merged.md"
+    merged.write_text("## Title ##\n\n## Keep#\n", encoding="utf-8")
+    final = tmp_path / "final.md"
+
+    def _fake_run(command, capture_output, text, check):
+        final.write_text("## Title ##\n\n## Keep#\n", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr("docdown.stages.toc.subprocess.run", _fake_run)
+
+    generate_toc(merged, final, toc_depth=3, logger=Mock())
+    rendered = final.read_text(encoding="utf-8")
+    assert "- [Title](#title)" in rendered
+    assert "- [Title ##](#title)" not in rendered
+    assert "- [Keep#](#keep)" in rendered
+
+
 def test_log_heading_diagnostics_reports_chunk_and_merged_heading_stats(tmp_path):
     markdown_dir = tmp_path / "markdown"
     markdown_dir.mkdir()
