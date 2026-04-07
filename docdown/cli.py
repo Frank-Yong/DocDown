@@ -8,7 +8,7 @@ from docdown.config import ConfigError, load_config
 from docdown.stages.chunk_validation import ChunkResult, validate_chunk
 from docdown.stages.cleanup import CleanupError, cleanup_markdown_file
 from docdown.stages.convert import PandocError, convert_to_markdown, ensure_pandoc_available
-from docdown.stages.extract import orchestrate_extraction
+from docdown.stages.extract import ExtractorUsed, orchestrate_extraction
 from docdown.stages.merge import MergeError, merge_chunks
 from docdown.stages.split import PdfSplitError, PdfValidationError, split_pdf, validate_pdf
 from docdown.stages.toc import TocError, generate_toc, log_heading_diagnostics
@@ -209,11 +209,17 @@ def main(
             )
             continue
 
+        extractor_used = getattr(result, "extractor", None)
+        if isinstance(extractor_used, ExtractorUsed):
+            extractor_name = extractor_used.value
+        else:
+            extractor_name = str(extractor_used) if extractor_used is not None else None
+
         validation = validate_chunk(
             markdown_path,
             split_result.chunk_paths[result.chunk_number - 1],
             min_output_ratio=cfg.validation.min_output_ratio,
-            expect_headings=getattr(result, "extractor", None) != "pdfminer",
+            expect_headings=extractor_name != ExtractorUsed.PDFMINER.value,
             logger=logger,
             chunk_number=result.chunk_number,
         )
