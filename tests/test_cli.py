@@ -322,6 +322,7 @@ def test_cli_autoloads_repo_config_when_flag_omitted(tmp_path, monkeypatch):
             heuristic_allcaps_headings=False,
             toc_depth=3,
             log_level="INFO",
+            validation=SimpleNamespace(min_output_ratio=0.01, max_empty_chunks=0),
         )
 
     monkeypatch.setattr("docdown.cli.load_config", _fake_load_config)
@@ -376,6 +377,7 @@ def test_cli_uses_explicit_config_path_when_provided(tmp_path, monkeypatch):
             heuristic_allcaps_headings=False,
             toc_depth=3,
             log_level="INFO",
+            validation=SimpleNamespace(min_output_ratio=0.01, max_empty_chunks=0),
         )
 
     monkeypatch.setattr("docdown.cli.load_config", _fake_load_config)

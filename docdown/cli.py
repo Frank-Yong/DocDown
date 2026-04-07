@@ -5,6 +5,7 @@ from pathlib import Path
 import click
 
 from docdown.config import ConfigError, load_config
+from docdown.stages.chunk_validation import ChunkResult, validate_chunk
 from docdown.stages.cleanup import CleanupError, cleanup_markdown_file
 from docdown.stages.convert import PandocError, convert_to_markdown, ensure_pandoc_available
 from docdown.stages.extract import orchestrate_extraction
@@ -177,6 +178,7 @@ def main(
         raise click.ClickException(str(exc)) from exc
 
     converted_chunks = 0
+    chunk_results: list[ChunkResult] = []
     for result in successful_extractions:
         markdown_path = work_dir.markdown(result.chunk_number)
         try:
@@ -196,13 +198,59 @@ def main(
             )
         except (PandocError, CleanupError) as exc:
             logger.error("Markdown conversion/cleanup failed for chunk-%04d: %s", result.chunk_number, exc)
+            chunk_results.append(
+                ChunkResult(
+                    chunk_number=result.chunk_number,
+                    success=False,
+                    markdown_path=None,
+                    error=str(exc),
+                    validation=None,
+                )
+            )
             continue
+
+        validation = validate_chunk(
+            markdown_path,
+            split_result.chunk_paths[result.chunk_number - 1],
+            min_output_ratio=cfg.validation.min_output_ratio,
+            expect_headings=getattr(result, "extractor", None) != "pdfminer",
+            logger=logger,
+            chunk_number=result.chunk_number,
+        )
+        if not validation.valid:
+            chunk_results.append(
+                ChunkResult(
+                    chunk_number=result.chunk_number,
+                    success=False,
+                    markdown_path=markdown_path,
+                    error="; ".join(validation.errors),
+                    validation=validation,
+                )
+            )
+            continue
+
+        chunk_results.append(
+            ChunkResult(
+                chunk_number=result.chunk_number,
+                success=True,
+                markdown_path=markdown_path,
+                error=None,
+                validation=validation,
+            )
+        )
         converted_chunks += 1
 
     if converted_chunks == 0:
         raise click.ClickException("Markdown conversion/cleanup failed for all extracted chunks.")
 
-    logger.info("Conversion summary: %s converted, %s extraction successes skipped/failed", converted_chunks, len(successful_extractions) - converted_chunks)
+    failed_chunks = [item for item in chunk_results if not item.success]
+    warning_count = sum(len(item.validation.warnings) for item in chunk_results if item.validation is not None)
+    logger.info(
+        "Conversion summary: %s converted, %s extraction successes skipped/failed, %s chunk validation warnings",
+        converted_chunks,
+        len(failed_chunks),
+        warning_count,
+    )
 
     try:
         merge_chunks(
