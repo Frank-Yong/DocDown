@@ -278,11 +278,20 @@ def _ensure_visible_toc(target_path: Path, entries: list[tuple[int, str, str]]) 
 
 def _count_visible_toc_entries_near_top(markdown_text: str, *, max_scan_lines: int = 120) -> int:
     lines = markdown_text.splitlines()[:max_scan_lines]
-    toc_marker_seen = False
+    marker_proximity_window = 3
+    last_toc_marker_index: int | None = None
     current_run_count = 0
     current_run_has_marker = False
     run_counts_with_marker: list[int] = []
     run_counts_without_marker: list[int] = []
+
+    def _marker_applies_to_run(run_start_index: int) -> bool:
+        if last_toc_marker_index is None:
+            return False
+        if run_start_index - last_toc_marker_index > marker_proximity_window:
+            return False
+        intervening = lines[last_toc_marker_index + 1 : run_start_index]
+        return all(not part.strip() for part in intervening)
 
     def _flush_run() -> None:
         nonlocal current_run_count, current_run_has_marker
@@ -295,18 +304,18 @@ def _count_visible_toc_entries_near_top(markdown_text: str, *, max_scan_lines: i
         current_run_count = 0
         current_run_has_marker = False
 
-    for line in lines:
+    for line_index, line in enumerate(lines):
         stripped = line.strip()
         if re.match(r"^#{1,6}\s+table of contents\s*$", stripped, flags=re.IGNORECASE):
-            toc_marker_seen = True
+            last_toc_marker_index = line_index
         elif re.match(r"^\[toc\]$", stripped, flags=re.IGNORECASE):
-            toc_marker_seen = True
+            last_toc_marker_index = line_index
         elif re.search(r"<div\s+id=[\"']toc[\"']", stripped, flags=re.IGNORECASE):
-            toc_marker_seen = True
+            last_toc_marker_index = line_index
 
         if re.match(r"^\s*[-*]\s+\[[^\]]+\]\(#[^)]+\)\s*$", line):
             if current_run_count == 0:
-                current_run_has_marker = toc_marker_seen
+                current_run_has_marker = _marker_applies_to_run(line_index)
             current_run_count += 1
         else:
             _flush_run()

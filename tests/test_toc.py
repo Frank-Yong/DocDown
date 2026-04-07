@@ -180,6 +180,33 @@ def test_generate_toc_does_not_treat_single_non_marker_anchor_link_as_visible_to
     assert logger.info.call_args.args[1] == "python-fallback"
 
 
+def test_generate_toc_does_not_treat_distant_toc_marker_and_late_single_link_as_visible_toc(tmp_path, monkeypatch):
+    merged = tmp_path / "merged.md"
+    merged.write_text("# Title\n\n## Intro\n", encoding="utf-8")
+    final = tmp_path / "final.md"
+
+    def _fake_run(command, capture_output, text, check):
+        final.write_text(
+            "## Table of Contents\n\n"
+            "Intro paragraph\n"
+            "Another paragraph\n"
+            "Yet another paragraph\n\n"
+            "- [Jump to intro](#intro)\n\n"
+            "# Title\n\n## Intro\n",
+            encoding="utf-8",
+        )
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr("docdown.stages.toc.subprocess.run", _fake_run)
+
+    logger = Mock()
+    generate_toc(merged, final, toc_depth=3, logger=logger)
+
+    rendered = final.read_text(encoding="utf-8")
+    assert rendered.startswith("## Table of Contents")
+    assert logger.info.call_args.args[1] == "python-fallback"
+
+
 def test_generate_toc_rejects_invalid_depth(tmp_path):
     merged = tmp_path / "merged.md"
     merged.write_text("# Title\n", encoding="utf-8")
