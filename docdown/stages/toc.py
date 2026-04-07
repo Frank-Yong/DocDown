@@ -327,8 +327,13 @@ def _build_python_toc_block(entries: list[tuple[int, str, str]]) -> str:
     lines = ["## Table of Contents", ""]
     for level, title, anchor in entries:
         indent = "  " * max(level - 1, 0)
-        lines.append(f"{indent}- [{title}](#{anchor})")
+        safe_title = _escape_markdown_link_text(title)
+        lines.append(f"{indent}- [{safe_title}](#{anchor})")
     return "\n".join(lines)
+
+
+def _escape_markdown_link_text(title: str) -> str:
+    return title.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
 
 
 def _github_anchor(title: str) -> str:
