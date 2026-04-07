@@ -7,6 +7,7 @@ from docdown.stages.cleanup import (
     cleanup_markdown_text,
     collapse_blank_lines,
     normalize_headings,
+    reconstruct_headings,
     remove_repeated_header_footer_lines,
     strip_trailing_whitespace,
 )
@@ -132,3 +133,74 @@ def test_cleanup_markdown_text_is_idempotent():
     twice = cleanup_markdown_text(once)
 
     assert twice == once
+
+
+def test_reconstruct_headings_promotes_numbered_lines_by_default():
+    text = "1.2 Scope\nThis line is body text.\n"
+
+    cleaned = cleanup_markdown_text(text)
+
+    assert cleaned.startswith("## 1.2 Scope")
+    assert "This line is body text." in cleaned
+
+
+def test_reconstruct_headings_can_disable_numbered_heuristic():
+    text = "1.2 Scope\n"
+
+    cleaned = cleanup_markdown_text(
+        text,
+        heuristic_numbered_headings=False,
+        heuristic_titlecase_headings=False,
+        heuristic_allcaps_headings=False,
+    )
+
+    assert cleaned == text
+
+
+def test_reconstruct_headings_can_enable_titlecase_heuristic():
+    text = "Project Administration\nregular body sentence should stay plain\n"
+
+    cleaned = cleanup_markdown_text(
+        text,
+        heuristic_numbered_headings=False,
+        heuristic_titlecase_headings=True,
+        heuristic_allcaps_headings=False,
+    )
+
+    assert cleaned.startswith("## Project Administration")
+    assert "regular body sentence should stay plain" in cleaned
+
+
+def test_reconstruct_headings_can_enable_allcaps_heuristic():
+    text = "SYSTEM DATABASE\n"
+
+    cleaned = cleanup_markdown_text(
+        text,
+        heuristic_numbered_headings=False,
+        heuristic_titlecase_headings=False,
+        heuristic_allcaps_headings=True,
+    )
+
+    assert cleaned == "## SYSTEM DATABASE\n"
+
+
+def test_reconstruct_headings_keeps_existing_markdown_constructs_unchanged():
+    text = "- bullet item\nhttps://example.com\nA normal sentence.\n"
+
+    cleaned = reconstruct_headings(
+        text,
+        heuristic_numbered_headings=True,
+        heuristic_titlecase_headings=True,
+        heuristic_allcaps_headings=True,
+    )
+
+    assert cleaned == text
+
+
+def test_reconstruct_headings_skips_indented_code_block_lines():
+    text = "    1.2 Scope\nRegular body line\n"
+
+    cleaned = cleanup_markdown_text(text)
+
+    assert cleaned.startswith("    1.2 Scope")
+    assert "## 1.2 Scope" not in cleaned

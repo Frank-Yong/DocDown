@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections import Counter
 import logging
 from pathlib import Path
 import re
 import shutil
 import subprocess
 from typing import Iterable
+import unicodedata
 
 from docdown.utils.logging import get_logger, log_tool_command
 
@@ -17,6 +19,63 @@ LogLike = logging.Logger | logging.LoggerAdapter
 
 class TocError(ValueError):
     """Raised when TOC generation inputs are invalid or fallback copy fails."""
+
+
+def log_heading_diagnostics(markdown_dir: Path, merged_path: Path, *, logger: LogLike | None = None) -> None:
+    """Log heading-quality diagnostics for chunk markdown and merged markdown."""
+
+    active_logger = logger or get_logger()
+    source_dir = Path(markdown_dir)
+    merged = Path(merged_path)
+
+    chunk_paths = sorted(source_dir.glob("chunk-*.md")) if source_dir.exists() and source_dir.is_dir() else []
+    chunk_level_counts: Counter[int] = Counter()
+    chunks_with_headings = 0
+    chunks_without_headings = 0
+    unreadable_chunks = 0
+
+    for chunk_path in chunk_paths:
+        try:
+            with chunk_path.open("r", encoding="utf-8", newline="") as handle:
+                per_file_counts = _heading_level_counts(handle)
+        except OSError as exc:
+            active_logger.warning("Heading diagnostics skipped unreadable chunk markdown %s: %s", chunk_path, exc)
+            unreadable_chunks += 1
+            continue
+
+        heading_total = sum(per_file_counts.values())
+        if heading_total > 0:
+            chunks_with_headings += 1
+            chunk_level_counts.update(per_file_counts)
+        else:
+            chunks_without_headings += 1
+
+    active_logger.info(
+        "Heading diagnostics (chunks): files=%s with_headings=%s without_headings=%s unreadable=%s level_counts=%s",
+        len(chunk_paths),
+        chunks_with_headings,
+        chunks_without_headings,
+        unreadable_chunks,
+        _format_level_counts(chunk_level_counts),
+    )
+
+    if not merged.exists() or not merged.is_file():
+        active_logger.warning("Heading diagnostics skipped merged markdown missing: %s", merged)
+        return
+
+    try:
+        with merged.open("r", encoding="utf-8", newline="") as handle:
+            merged_level_counts = _heading_level_counts(handle)
+    except OSError as exc:
+        active_logger.warning("Heading diagnostics skipped unreadable merged markdown %s: %s", merged, exc)
+        return
+
+    active_logger.info(
+        "Heading diagnostics (merged): headings_total=%s level_counts=%s path=%s",
+        sum(merged_level_counts.values()),
+        _format_level_counts(merged_level_counts),
+        merged,
+    )
 
 
 def generate_toc(
@@ -38,11 +97,8 @@ def generate_toc(
     if not source.exists() or not source.is_file():
         raise TocError(f"Merged markdown input not found: {source}")
 
-    try:
-        with source.open("r", encoding="utf-8", newline="") as handle:
-            entry_count = _count_headings_for_toc(handle, toc_depth)
-    except OSError as exc:
-        raise TocError(f"Failed reading merged markdown {source}: {exc}") from exc
+    entries = _collect_toc_entries(source, toc_depth)
+    entry_count = len(entries)
 
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -75,6 +131,14 @@ def generate_toc(
             entry_count=entry_count,
             toc_depth=toc_depth,
         )
+        mode, emitted_entries = _ensure_visible_toc(target, entries)
+        active_logger.info(
+            "TOC generation complete: mode=%s entries=%s depth=%s path=%s",
+            mode,
+            emitted_entries,
+            toc_depth,
+            target,
+        )
         return target
 
     if result.returncode != 0:
@@ -87,11 +151,22 @@ def generate_toc(
             entry_count=entry_count,
             toc_depth=toc_depth,
         )
+        mode, emitted_entries = _ensure_visible_toc(target, entries)
+        active_logger.info(
+            "TOC generation complete: mode=%s entries=%s depth=%s path=%s",
+            mode,
+            emitted_entries,
+            toc_depth,
+            target,
+        )
         return target
 
+    mode, emitted_entries = _ensure_visible_toc(target, entries)
+
     active_logger.info(
-        "TOC generation complete: entries=%s depth=%s path=%s",
-        entry_count,
+        "TOC generation complete: mode=%s entries=%s depth=%s path=%s",
+        mode,
+        emitted_entries,
         toc_depth,
         target,
     )
@@ -114,8 +189,12 @@ def _copy_without_toc(
     except OSError as exc:
         raise TocError(f"TOC fallback copy failed from {source} to {target}: {exc}") from exc
 
-    logger.warning("TOC generation degraded; copied merged markdown without TOC: %s", reason)
-    logger.info("TOC generation complete: entries=%s depth=%s path=%s", entry_count, toc_depth, target)
+    logger.warning(
+        "TOC generation degraded; copied merged markdown after pandoc failure and will evaluate fallback TOC injection: %s (entries=%s depth=%s)",
+        reason,
+        entry_count,
+        toc_depth,
+    )
 
 
 def _count_headings_for_toc(markdown_lines: Iterable[str] | str, toc_depth: int) -> int:
@@ -143,6 +222,184 @@ def _count_headings_for_toc(markdown_lines: Iterable[str] | str, toc_depth: int)
             count += 1
 
     return count
+
+
+def _collect_toc_entries(merged_path: Path, toc_depth: int) -> list[tuple[int, str, str]]:
+    """Collect TOC entries from merged markdown headings with GitHub-compatible anchors."""
+
+    try:
+        with merged_path.open("r", encoding="utf-8", newline="") as handle:
+            heading_pairs = list(_iter_headings(handle, toc_depth=toc_depth))
+    except OSError as exc:
+        raise TocError(f"Failed reading merged markdown {merged_path}: {exc}") from exc
+
+    seen_anchors: Counter[str] = Counter()
+    entries: list[tuple[int, str, str]] = []
+    for level, title in heading_pairs:
+        anchor_base = _github_anchor(title)
+        seen_anchors[anchor_base] += 1
+        occurrence = seen_anchors[anchor_base]
+        anchor = anchor_base if occurrence == 1 else f"{anchor_base}-{occurrence - 1}"
+        entries.append((level, title, anchor))
+
+    return entries
+
+
+def _ensure_visible_toc(target_path: Path, entries: list[tuple[int, str, str]]) -> tuple[str, int]:
+    """Ensure final output has a visible TOC near the top; inject Python TOC when missing."""
+
+    try:
+        content = target_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise TocError(f"Failed reading generated markdown {target_path}: {exc}") from exc
+
+    visible_entries = _count_visible_toc_entries_near_top(content)
+    if visible_entries > 0:
+        return "pandoc", visible_entries
+
+    toc_block = _build_python_toc_block(entries)
+    if not toc_block:
+        toc_block = "## Table of Contents"
+        mode = "python-fallback-empty"
+    else:
+        mode = "python-fallback"
+
+    if content and not content.endswith("\n"):
+        content = f"{content}\n"
+
+    rewritten = f"{toc_block}\n\n{content}" if content else f"{toc_block}\n"
+    try:
+        target_path.write_text(rewritten, encoding="utf-8")
+    except OSError as exc:
+        raise TocError(f"Failed writing TOC fallback markdown {target_path}: {exc}") from exc
+
+    return mode, len(entries)
+
+
+def _count_visible_toc_entries_near_top(markdown_text: str, *, max_scan_lines: int = 120) -> int:
+    lines = markdown_text.splitlines()[:max_scan_lines]
+    marker_proximity_window = 3
+    last_toc_marker_index: int | None = None
+    current_run_count = 0
+    current_run_has_marker = False
+    run_counts_with_marker: list[int] = []
+    run_counts_without_marker: list[int] = []
+
+    def _marker_applies_to_run(run_start_index: int) -> bool:
+        if last_toc_marker_index is None:
+            return False
+        if run_start_index - last_toc_marker_index > marker_proximity_window:
+            return False
+        intervening = lines[last_toc_marker_index + 1 : run_start_index]
+        return all(not part.strip() for part in intervening)
+
+    def _flush_run() -> None:
+        nonlocal current_run_count, current_run_has_marker
+        if current_run_count <= 0:
+            return
+        if current_run_has_marker:
+            run_counts_with_marker.append(current_run_count)
+        else:
+            run_counts_without_marker.append(current_run_count)
+        current_run_count = 0
+        current_run_has_marker = False
+
+    for line_index, line in enumerate(lines):
+        stripped = line.strip()
+        if re.match(r"^#{1,6}\s+table of contents\s*$", stripped, flags=re.IGNORECASE):
+            last_toc_marker_index = line_index
+        elif re.match(r"^\[toc\]$", stripped, flags=re.IGNORECASE):
+            last_toc_marker_index = line_index
+        elif re.search(r"<div\s+id=[\"']toc[\"']", stripped, flags=re.IGNORECASE):
+            last_toc_marker_index = line_index
+
+        if re.match(r"^\s*[-*]\s+\[[^\]]+\]\(#[^)]+\)\s*$", line):
+            if current_run_count == 0:
+                current_run_has_marker = _marker_applies_to_run(line_index)
+            current_run_count += 1
+        else:
+            _flush_run()
+
+    _flush_run()
+
+    if run_counts_with_marker:
+        return run_counts_with_marker[0]
+
+    for count in run_counts_without_marker:
+        if count >= 2:
+            return count
+
+    return 0
+
+
+def _build_python_toc_block(entries: list[tuple[int, str, str]]) -> str:
+    if not entries:
+        return ""
+
+    lines = ["## Table of Contents", ""]
+    for level, title, anchor in entries:
+        indent = "  " * max(level - 1, 0)
+        safe_title = _escape_markdown_link_text(title)
+        lines.append(f"{indent}- [{safe_title}](#{anchor})")
+    return "\n".join(lines)
+
+
+def _escape_markdown_link_text(title: str) -> str:
+    return title.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
+
+
+def _github_anchor(title: str) -> str:
+    anchor = unicodedata.normalize("NFC", title.strip()).casefold()
+    anchor = re.sub(r"[^\w\s-]", "", anchor)
+    anchor = re.sub(r"\s+", "-", anchor)
+    anchor = re.sub(r"-+", "-", anchor).strip("-")
+    return anchor or "section"
+
+
+def _heading_level_counts(markdown_lines: Iterable[str] | str) -> Counter[int]:
+    """Return heading counts per ATX level while skipping fenced code blocks."""
+
+    levels: Counter[int] = Counter()
+    for level, _ in _iter_headings(markdown_lines, toc_depth=6):
+        levels[level] += 1
+
+    return levels
+
+
+def _iter_headings(markdown_lines: Iterable[str] | str, *, toc_depth: int) -> Iterable[tuple[int, str]]:
+    """Yield (level, title) for ATX headings up to toc_depth, excluding fenced code blocks."""
+
+    in_fenced_block = False
+    lines = markdown_lines.splitlines() if isinstance(markdown_lines, str) else markdown_lines
+    for line in lines:
+        normalized = line.lstrip(" ")
+        leading_spaces = len(line) - len(normalized)
+
+        if leading_spaces <= 3 and (normalized.startswith("```") or normalized.startswith("~~~")):
+            in_fenced_block = not in_fenced_block
+            continue
+        if in_fenced_block:
+            continue
+
+        match = re.match(r"^ {0,3}(#{1,6})[ \t]+(.+?)\s*$", line)
+        if match is None:
+            continue
+
+        level = len(match.group(1))
+        if level > toc_depth:
+            continue
+
+        # CommonMark allows optional closing '#' runs if preceded by whitespace.
+        title = re.sub(r"[ \t]+#+[ \t]*$", "", match.group(2)).strip()
+        if not title:
+            continue
+        yield level, title
+
+
+def _format_level_counts(level_counts: Counter[int]) -> str:
+    if not level_counts:
+        return "none"
+    return ",".join(f"h{level}:{level_counts[level]}" for level in range(1, 7) if level_counts[level] > 0)
 
 
 def _combined_output(result: subprocess.CompletedProcess[str]) -> str:
