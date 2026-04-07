@@ -68,7 +68,7 @@ Potential files:
 - `tests/test_toc.py`
 - `tests/test_cli.py`
 
-Validation artifacts:
+Validation artifacts (local run outputs; not committed to the repository):
 
 - `runs/external-toc-6.4-final-001/final.md`
 - `runs/external-toc-6.4-final-002/final.md`
