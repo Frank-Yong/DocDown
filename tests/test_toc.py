@@ -38,7 +38,7 @@ def test_generate_toc_runs_pandoc_and_logs_entry_count(tmp_path, monkeypatch):
     assert logger.info.call_args.args[2] == 2
 
 
-def test_generate_toc_copies_merged_when_pandoc_fails(tmp_path, monkeypatch):
+def test_generate_toc_injects_python_fallback_when_pandoc_fails(tmp_path, monkeypatch):
     merged = tmp_path / "merged.md"
     merged.write_text("# Title\n\n## Intro\n", encoding="utf-8")
     final = tmp_path / "final.md"
