@@ -123,7 +123,7 @@ def test_generate_toc_accepts_div_toc_marker_without_duplicate_insertion(tmp_pat
     assert logger.info.call_args.args[2] == 1
 
 
-def test_generate_toc_logs_zero_emitted_entries_when_pandoc_toc_is_not_visible(tmp_path, monkeypatch):
+def test_generate_toc_logs_python_fallback_entries_when_pandoc_toc_is_not_visible(tmp_path, monkeypatch):
     merged = tmp_path / "merged.md"
     merged.write_text("# Title\n\n## Intro\n\n### Details\n", encoding="utf-8")
     final = tmp_path / "final.md"
