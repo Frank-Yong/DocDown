@@ -31,6 +31,7 @@ def log_heading_diagnostics(markdown_dir: Path, merged_path: Path, *, logger: Lo
     chunk_level_counts: Counter[int] = Counter()
     chunks_with_headings = 0
     chunks_without_headings = 0
+    unreadable_chunks = 0
 
     for chunk_path in chunk_paths:
         try:
@@ -38,6 +39,7 @@ def log_heading_diagnostics(markdown_dir: Path, merged_path: Path, *, logger: Lo
                 per_file_counts = _heading_level_counts(handle)
         except OSError as exc:
             active_logger.warning("Heading diagnostics skipped unreadable chunk markdown %s: %s", chunk_path, exc)
+            unreadable_chunks += 1
             continue
 
         heading_total = sum(per_file_counts.values())
@@ -48,10 +50,11 @@ def log_heading_diagnostics(markdown_dir: Path, merged_path: Path, *, logger: Lo
             chunks_without_headings += 1
 
     active_logger.info(
-        "Heading diagnostics (chunks): files=%s with_headings=%s without_headings=%s level_counts=%s",
+        "Heading diagnostics (chunks): files=%s with_headings=%s without_headings=%s unreadable=%s level_counts=%s",
         len(chunk_paths),
         chunks_with_headings,
         chunks_without_headings,
+        unreadable_chunks,
         _format_level_counts(chunk_level_counts),
     )
 

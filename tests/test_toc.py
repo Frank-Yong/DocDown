@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -237,9 +238,41 @@ def test_log_heading_diagnostics_reports_chunk_and_merged_heading_stats(tmp_path
     assert first[1] == 2
     assert first[2] == 1
     assert first[3] == 1
-    assert first[4] == "h1:1,h2:1"
+    assert first[4] == 0
+    assert first[5] == "h1:1,h2:1"
 
     second = logger.info.call_args_list[1].args
     assert second[0].startswith("Heading diagnostics (merged):")
     assert second[1] == 3
     assert second[2] == "h1:1,h2:1,h3:1"
+
+
+def test_log_heading_diagnostics_includes_unreadable_chunk_count(tmp_path, monkeypatch):
+    markdown_dir = tmp_path / "markdown"
+    markdown_dir.mkdir()
+    (markdown_dir / "chunk-0001.md").write_text("# A\n", encoding="utf-8")
+    (markdown_dir / "chunk-0002.md").write_text("## B\n", encoding="utf-8")
+
+    merged = tmp_path / "merged.md"
+    merged.write_text("# A\n\n## B\n", encoding="utf-8")
+
+    original_open = Path.open
+
+    def _fake_open(self, *args, **kwargs):
+        if self.name == "chunk-0002.md":
+            raise OSError("permission denied")
+        return original_open(self, *args, **kwargs)
+
+    monkeypatch.setattr("docdown.stages.toc.Path.open", _fake_open)
+
+    logger = Mock()
+    log_heading_diagnostics(markdown_dir, merged, logger=logger)
+
+    first = logger.info.call_args_list[0].args
+    assert first[0].startswith("Heading diagnostics (chunks):")
+    assert first[1] == 2
+    assert first[2] == 1
+    assert first[3] == 0
+    assert first[4] == 1
+    assert first[5] == "h1:1"
+    logger.warning.assert_called_once()
