@@ -220,6 +220,25 @@ def test_python_toc_fallback_uses_unique_github_anchors_for_duplicates(tmp_path,
     assert "- [Intro](#intro-1)" in rendered
 
 
+def test_python_toc_fallback_preserves_unicode_github_anchors(tmp_path, monkeypatch):
+    merged = tmp_path / "merged.md"
+    merged.write_text("## Café\n\n## Überblick\n\n## 東京\n\n## Café\n", encoding="utf-8")
+    final = tmp_path / "final.md"
+
+    def _fake_run(command, capture_output, text, check):
+        final.write_text("## Café\n\n## Überblick\n\n## 東京\n\n## Café\n", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr("docdown.stages.toc.subprocess.run", _fake_run)
+
+    generate_toc(merged, final, toc_depth=3, logger=Mock())
+    rendered = final.read_text(encoding="utf-8")
+    assert "- [Café](#café)" in rendered
+    assert "- [Überblick](#überblick)" in rendered
+    assert "- [東京](#東京)" in rendered
+    assert "- [Café](#café-1)" in rendered
+
+
 def test_log_heading_diagnostics_reports_chunk_and_merged_heading_stats(tmp_path):
     markdown_dir = tmp_path / "markdown"
     markdown_dir.mkdir()

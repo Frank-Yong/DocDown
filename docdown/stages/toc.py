@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 from typing import Iterable
+import unicodedata
 
 from docdown.utils.logging import get_logger, log_tool_command
 
@@ -335,8 +336,8 @@ def _build_python_toc_block(entries: list[tuple[int, str, str]]) -> str:
 
 
 def _github_anchor(title: str) -> str:
-    anchor = title.strip().lower()
-    anchor = re.sub(r"[^a-z0-9\-_\s]", "", anchor)
+    anchor = unicodedata.normalize("NFC", title.strip()).casefold()
+    anchor = re.sub(r"[^\w\s-]", "", anchor)
     anchor = re.sub(r"\s+", "-", anchor)
     anchor = re.sub(r"-+", "-", anchor).strip("-")
     return anchor or "section"
