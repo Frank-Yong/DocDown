@@ -259,7 +259,10 @@ def _ensure_visible_toc(target_path: Path, entries: list[tuple[int, str, str]]) 
 
     toc_block = _build_python_toc_block(entries)
     if not toc_block:
-        return "pandoc", 0
+        toc_block = "## Table of Contents"
+        mode = "python-fallback-empty"
+    else:
+        mode = "python-fallback"
 
     if content and not content.endswith("\n"):
         content = f"{content}\n"
@@ -270,7 +273,7 @@ def _ensure_visible_toc(target_path: Path, entries: list[tuple[int, str, str]]) 
     except OSError as exc:
         raise TocError(f"Failed writing TOC fallback markdown {target_path}: {exc}") from exc
 
-    return "python-fallback", len(entries)
+    return mode, len(entries)
 
 
 def _count_visible_toc_entries_near_top(markdown_text: str, *, max_scan_lines: int = 120) -> int:

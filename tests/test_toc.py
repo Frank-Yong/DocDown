@@ -60,6 +60,26 @@ def test_generate_toc_injects_python_fallback_when_pandoc_fails(tmp_path, monkey
     assert logger.info.call_count == 1
 
 
+def test_generate_toc_injects_empty_toc_header_when_no_headings_exist(tmp_path, monkeypatch):
+    merged = tmp_path / "merged.md"
+    merged.write_text("plain paragraph\n", encoding="utf-8")
+    final = tmp_path / "final.md"
+
+    def _fake_run(command, capture_output, text, check):
+        return subprocess.CompletedProcess(command, 1, "", "conversion failed")
+
+    monkeypatch.setattr("docdown.stages.toc.subprocess.run", _fake_run)
+
+    logger = Mock()
+    generate_toc(merged, final, toc_depth=3, logger=logger)
+
+    rendered = final.read_text(encoding="utf-8")
+    assert rendered.startswith("## Table of Contents")
+    assert "plain paragraph" in rendered
+    assert logger.info.call_args.args[1] == "python-fallback-empty"
+    assert logger.info.call_args.args[2] == 0
+
+
 def test_generate_toc_inserts_python_fallback_when_pandoc_output_has_no_toc(tmp_path, monkeypatch):
     merged = tmp_path / "merged.md"
     merged.write_text("# Title\n\n## Intro\n\n### Details\n", encoding="utf-8")
