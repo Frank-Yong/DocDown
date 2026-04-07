@@ -195,3 +195,12 @@ def test_reconstruct_headings_keeps_existing_markdown_constructs_unchanged():
     )
 
     assert cleaned == text
+
+
+def test_reconstruct_headings_skips_indented_code_block_lines():
+    text = "    1.2 Scope\nRegular body line\n"
+
+    cleaned = cleanup_markdown_text(text)
+
+    assert cleaned.startswith("    1.2 Scope")
+    assert "## 1.2 Scope" not in cleaned

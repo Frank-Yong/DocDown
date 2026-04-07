@@ -128,6 +128,10 @@ def reconstruct_headings(
             rebuilt.append(line)
             continue
 
+        if leading_spaces >= 4:
+            rebuilt.append(line)
+            continue
+
         if in_fenced_block or not _is_heading_candidate_line(stripped):
             rebuilt.append(line)
             continue
