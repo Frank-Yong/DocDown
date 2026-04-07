@@ -273,10 +273,6 @@ def _ensure_visible_toc(target_path: Path, entries: list[tuple[int, str, str]]) 
     return "python-fallback", len(entries)
 
 
-def _has_visible_toc_near_top(markdown_text: str, *, max_scan_lines: int = 120) -> bool:
-    return _count_visible_toc_entries_near_top(markdown_text, max_scan_lines=max_scan_lines) > 0
-
-
 def _count_visible_toc_entries_near_top(markdown_text: str, *, max_scan_lines: int = 120) -> int:
     lines = markdown_text.splitlines()[:max_scan_lines]
     toc_marker_seen = False
