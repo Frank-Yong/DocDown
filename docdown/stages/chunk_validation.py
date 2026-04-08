@@ -70,6 +70,11 @@ def validate_chunk(
         _log_errors(active_logger, errors, chunk_number)
         return ChunkValidationResult(valid=False, errors=tuple(errors), warnings=tuple(warnings))
 
+    if not text.strip():
+        errors.append("Empty output")
+        _log_errors(active_logger, errors, chunk_number)
+        return ChunkValidationResult(valid=False, errors=tuple(errors), warnings=tuple(warnings))
+
     md_size = md_path.stat().st_size
     if pdf_path.exists() and pdf_path.is_file():
         pdf_size = pdf_path.stat().st_size
