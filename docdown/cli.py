@@ -197,6 +197,18 @@ def main(
                 heuristic_titlecase_headings=cfg.heuristic_titlecase_headings,
                 heuristic_allcaps_headings=cfg.heuristic_allcaps_headings,
             )
+        except UnicodeDecodeError:
+            logger.error("Markdown conversion/cleanup failed for chunk-%04d: Invalid UTF-8 encoding", result.chunk_number)
+            chunk_results.append(
+                ChunkResult(
+                    chunk_number=result.chunk_number,
+                    success=False,
+                    markdown_path=markdown_path,
+                    error="Invalid UTF-8 encoding",
+                    validation=None,
+                )
+            )
+            continue
         except (PandocError, CleanupError) as exc:
             logger.error("Markdown conversion/cleanup failed for chunk-%04d: %s", result.chunk_number, exc)
             chunk_results.append(

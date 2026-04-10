@@ -223,6 +223,63 @@ def test_cli_fails_when_all_conversion_or_cleanup_steps_fail(tmp_path, monkeypat
     assert "Markdown conversion/cleanup failed for all extracted chunks" in result.output
 
 
+def test_cli_continues_when_cleanup_hits_invalid_utf8_for_one_chunk(tmp_path, monkeypatch):
+    dummy_pdf = tmp_path / "test.pdf"
+    dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+    extracted_1 = tmp_path / "out" / "extracted" / "chunk-0001.xml"
+    extracted_2 = tmp_path / "out" / "extracted" / "chunk-0002.xml"
+
+    monkeypatch.setattr(
+        "docdown.cli.validate_pdf",
+        lambda *args, **kwargs: SimpleNamespace(page_count=2, file_size_bytes=dummy_pdf.stat().st_size),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.split_pdf",
+        lambda *args, **kwargs: SimpleNamespace(
+            chunk_count=2,
+            chunk_paths=(
+                tmp_path / "out" / "chunks" / "chunk-0001.pdf",
+                tmp_path / "out" / "chunks" / "chunk-0002.pdf",
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.orchestrate_extraction",
+        lambda *args, **kwargs: [
+            SimpleNamespace(chunk_number=1, success=True, output_path=extracted_1, extractor="grobid"),
+            SimpleNamespace(chunk_number=2, success=True, output_path=extracted_2, extractor="grobid"),
+        ],
+    )
+    monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
+
+    def _fake_convert(input_path, output_path, **kwargs):
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text("# ok", encoding="utf-8")
+        return Path(output_path)
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
+
+    call_count = {"count": 0}
+
+    def _fake_cleanup(*args, **kwargs):
+        call_count["count"] += 1
+        if call_count["count"] == 1:
+            raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+        return Path(args[0])
+
+    monkeypatch.setattr("docdown.cli.cleanup_markdown_file", _fake_cleanup)
+    monkeypatch.setattr(
+        "docdown.cli.validate_chunk",
+        lambda *args, **kwargs: SimpleNamespace(valid=True, warnings=(), errors=()),
+    )
+    monkeypatch.setattr("docdown.cli.generate_toc", lambda *args, **kwargs: Path(args[1]))
+
+    runner = CliRunner()
+    result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
+
+    assert result.exit_code == 0
+
+
 def test_cli_surfaces_merge_errors(tmp_path, monkeypatch):
     dummy_pdf = tmp_path / "test.pdf"
     dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
