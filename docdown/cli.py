@@ -250,9 +250,14 @@ def main(
         raise click.ClickException("Markdown conversion/cleanup failed for all extracted chunks.")
 
     failed_chunks = [item for item in chunk_results if not item.success]
-    if len(failed_chunks) > cfg.validation.max_empty_chunks:
+    empty_failed_chunks = [
+        item
+        for item in failed_chunks
+        if item.validation is not None and "Empty output" in item.validation.errors
+    ]
+    if len(empty_failed_chunks) > cfg.validation.max_empty_chunks:
         raise click.ClickException(
-            f"{len(failed_chunks)} chunks failed (max allowed: {cfg.validation.max_empty_chunks})."
+            f"{len(empty_failed_chunks)} empty chunks failed validation (max allowed: {cfg.validation.max_empty_chunks})."
         )
 
     warning_count = sum(len(item.validation.warnings) for item in chunk_results if item.validation is not None)

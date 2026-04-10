@@ -445,7 +445,66 @@ def test_cli_enforces_max_empty_chunks_threshold(tmp_path, monkeypatch):
     )
 
     assert result.exit_code != 0
-    assert "1 chunks failed (max allowed: 0)." in result.output
+    assert "1 empty chunks failed validation (max allowed: 0)." in result.output
+
+
+def test_cli_does_not_count_non_empty_validation_failures_toward_max_empty_chunks(tmp_path, monkeypatch):
+    dummy_pdf = tmp_path / "test.pdf"
+    dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+    extracted_1 = tmp_path / "out" / "extracted" / "chunk-0001.xml"
+    extracted_2 = tmp_path / "out" / "extracted" / "chunk-0002.xml"
+
+    monkeypatch.setattr(
+        "docdown.cli.validate_pdf",
+        lambda *args, **kwargs: SimpleNamespace(page_count=2, file_size_bytes=dummy_pdf.stat().st_size),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.split_pdf",
+        lambda *args, **kwargs: SimpleNamespace(
+            chunk_count=2,
+            chunk_paths=(
+                tmp_path / "out" / "chunks" / "chunk-0001.pdf",
+                tmp_path / "out" / "chunks" / "chunk-0002.pdf",
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.orchestrate_extraction",
+        lambda *args, **kwargs: [
+            SimpleNamespace(chunk_number=1, success=True, output_path=extracted_1, extractor="grobid"),
+            SimpleNamespace(chunk_number=2, success=True, output_path=extracted_2, extractor="grobid"),
+        ],
+    )
+    monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
+
+    def _fake_convert(input_path, output_path, **kwargs):
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text("# ok", encoding="utf-8")
+        return Path(output_path)
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
+
+    def _fake_validate_chunk(*args, **kwargs):
+        if kwargs["chunk_number"] == 1:
+            return SimpleNamespace(valid=False, warnings=(), errors=("Invalid UTF-8 encoding",))
+        return SimpleNamespace(valid=True, warnings=(), errors=())
+
+    monkeypatch.setattr("docdown.cli.validate_chunk", _fake_validate_chunk)
+    monkeypatch.setattr("docdown.cli.generate_toc", lambda *args, **kwargs: Path(args[1]))
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        [
+            str(dummy_pdf),
+            "-o",
+            str(tmp_path / "out"),
+            "--max-empty-chunks",
+            "0",
+        ],
+    )
+
+    assert result.exit_code == 0
 
 
 def test_cli_autoloads_repo_config_when_flag_omitted(tmp_path, monkeypatch):
