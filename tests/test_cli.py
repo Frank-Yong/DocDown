@@ -507,6 +507,53 @@ def test_cli_does_not_count_non_empty_validation_failures_toward_max_empty_chunk
     assert result.exit_code == 0
 
 
+def test_cli_fails_fast_on_non_recoverable_chunk_validation_errors(tmp_path, monkeypatch):
+    dummy_pdf = tmp_path / "test.pdf"
+    dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+    extracted_path = tmp_path / "out" / "extracted" / "chunk-0001.xml"
+
+    monkeypatch.setattr(
+        "docdown.cli.validate_pdf",
+        lambda *args, **kwargs: SimpleNamespace(page_count=1, file_size_bytes=dummy_pdf.stat().st_size),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.split_pdf",
+        lambda *args, **kwargs: SimpleNamespace(
+            chunk_count=1,
+            chunk_paths=(tmp_path / "out" / "chunks" / "chunk-0001.pdf",),
+        ),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.orchestrate_extraction",
+        lambda *args, **kwargs: [
+            SimpleNamespace(chunk_number=1, success=True, output_path=extracted_path, extractor="grobid")
+        ],
+    )
+    monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
+
+    def _fake_convert(input_path, output_path, **kwargs):
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text("# ok", encoding="utf-8")
+        return Path(output_path)
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
+    monkeypatch.setattr(
+        "docdown.cli.validate_chunk",
+        lambda *args, **kwargs: SimpleNamespace(
+            valid=False,
+            warnings=(),
+            errors=("Markdown output is not a file",),
+        ),
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
+
+    assert result.exit_code != 0
+    assert "Chunk validation failed for chunk-0001" in result.output
+    assert "Markdown output is not a file" in result.output
+
+
 def test_cli_autoloads_repo_config_when_flag_omitted(tmp_path, monkeypatch):
     dummy_pdf = tmp_path / "test.pdf"
     dummy_pdf.write_bytes(b"%PDF-1.4 dummy")

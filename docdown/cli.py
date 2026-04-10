@@ -224,6 +224,17 @@ def main(
             chunk_number=result.chunk_number,
         )
         if not validation.valid:
+            recoverable_validation_errors = {"Empty output", "Invalid UTF-8 encoding"}
+            non_recoverable_errors = [
+                issue for issue in validation.errors if issue not in recoverable_validation_errors
+            ]
+            if non_recoverable_errors:
+                raise click.ClickException(
+                    "Chunk validation failed for "
+                    f"chunk-{result.chunk_number:04d}: "
+                    f"{' ; '.join(non_recoverable_errors)}"
+                )
+
             chunk_results.append(
                 ChunkResult(
                     chunk_number=result.chunk_number,
