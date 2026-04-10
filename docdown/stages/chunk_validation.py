@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import logging
 from pathlib import Path
 import re
+import stat as stat_types
 
 from docdown.utils.logging import get_chunk_logger, get_logger
 
@@ -54,7 +55,23 @@ def validate_chunk(
     errors: list[str] = []
     warnings: list[str] = []
 
-    if not md_path.exists() or not md_path.is_file() or md_path.stat().st_size == 0:
+    try:
+        md_stat = md_path.stat()
+    except FileNotFoundError:
+        errors.append("Empty output")
+        _log_errors(active_logger, errors, chunk_number)
+        return ChunkValidationResult(valid=False, errors=tuple(errors), warnings=tuple(warnings))
+    except OSError as exc:
+        errors.append(f"Failed reading markdown output metadata: {exc}")
+        _log_errors(active_logger, errors, chunk_number)
+        return ChunkValidationResult(valid=False, errors=tuple(errors), warnings=tuple(warnings))
+
+    if not stat_types.S_ISREG(md_stat.st_mode):
+        errors.append("Markdown output is not a file")
+        _log_errors(active_logger, errors, chunk_number)
+        return ChunkValidationResult(valid=False, errors=tuple(errors), warnings=tuple(warnings))
+
+    if md_stat.st_size == 0:
         errors.append("Empty output")
         _log_errors(active_logger, errors, chunk_number)
         return ChunkValidationResult(valid=False, errors=tuple(errors), warnings=tuple(warnings))
@@ -75,15 +92,18 @@ def validate_chunk(
         _log_errors(active_logger, errors, chunk_number)
         return ChunkValidationResult(valid=False, errors=tuple(errors), warnings=tuple(warnings))
 
-    md_size = md_path.stat().st_size
-    if pdf_path.exists() and pdf_path.is_file():
-        pdf_size = pdf_path.stat().st_size
-        if pdf_size > 0:
-            ratio = md_size / pdf_size
-            if ratio < min_output_ratio:
-                warnings.append(
-                    f"Output ratio {ratio:.4f} below threshold {min_output_ratio:.4f}"
-                )
+    md_size = md_stat.st_size
+    try:
+        pdf_stat = pdf_path.stat()
+    except OSError:
+        pdf_stat = None
+
+    if pdf_stat is not None and stat_types.S_ISREG(pdf_stat.st_mode) and pdf_stat.st_size > 0:
+        ratio = md_size / pdf_stat.st_size
+        if ratio < min_output_ratio:
+            warnings.append(
+                f"Output ratio {ratio:.4f} below threshold {min_output_ratio:.4f}"
+            )
 
     if expect_headings and not re.search(r"^#{1,6}[ \t]+\S", text, re.MULTILINE):
         warnings.append("No headings detected")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import Mock
 
 from docdown.stages.chunk_validation import validate_chunk
@@ -62,6 +63,63 @@ def test_validate_chunk_fails_for_whitespace_only_output(tmp_path):
 
     assert result.valid is False
     assert result.errors == ("Empty output",)
+
+
+def test_validate_chunk_fails_when_markdown_stat_errors(tmp_path, monkeypatch):
+    md_path = tmp_path / "chunk-0001.md"
+    md_path.write_text("# Heading\n", encoding="utf-8")
+    pdf_path = tmp_path / "chunk-0001.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\n" + b"x" * 200)
+
+    original_stat = Path.stat
+
+    def _fake_stat(self):
+        if self == md_path:
+            raise OSError("permission denied")
+        return original_stat(self)
+
+    monkeypatch.setattr("pathlib.Path.stat", _fake_stat)
+
+    result = validate_chunk(
+        md_path,
+        pdf_path,
+        min_output_ratio=0.01,
+        expect_headings=True,
+        logger=Mock(),
+        chunk_number=1,
+    )
+
+    assert result.valid is False
+    assert any("Failed reading markdown output metadata" in error for error in result.errors)
+
+
+def test_validate_chunk_skips_ratio_when_pdf_stat_errors(tmp_path, monkeypatch):
+    md_path = tmp_path / "chunk-0001.md"
+    md_path.write_text("# Heading\n", encoding="utf-8")
+    pdf_path = tmp_path / "chunk-0001.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\n" + b"x" * 200)
+
+    original_stat = Path.stat
+
+    def _fake_stat(self):
+        if self == pdf_path:
+            raise OSError("permission denied")
+        return original_stat(self)
+
+    monkeypatch.setattr("pathlib.Path.stat", _fake_stat)
+
+    result = validate_chunk(
+        md_path,
+        pdf_path,
+        min_output_ratio=0.5,
+        expect_headings=False,
+        logger=Mock(),
+        chunk_number=1,
+    )
+
+    assert result.valid is True
+    assert result.errors == ()
+    assert result.warnings == ()
 
 
 def test_validate_chunk_warns_for_small_output_ratio(tmp_path):
