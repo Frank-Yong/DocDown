@@ -160,3 +160,23 @@ def test_validate_chunk_warns_when_headings_expected_but_missing(tmp_path):
     assert result.valid is True
     assert result.errors == ()
     assert "No headings detected" in result.warnings
+
+
+def test_validate_chunk_accepts_heading_with_leading_spaces(tmp_path):
+    md_path = tmp_path / "chunk-0001.md"
+    md_path.write_text("   ## Indented heading\nbody text\n", encoding="utf-8")
+    pdf_path = tmp_path / "chunk-0001.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\n" + b"x" * 200)
+
+    result = validate_chunk(
+        md_path,
+        pdf_path,
+        min_output_ratio=0.01,
+        expect_headings=True,
+        logger=Mock(),
+        chunk_number=1,
+    )
+
+    assert result.valid is True
+    assert result.errors == ()
+    assert "No headings detected" not in result.warnings

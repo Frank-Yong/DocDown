@@ -105,7 +105,7 @@ def validate_chunk(
                 f"Output ratio {ratio:.4f} below threshold {min_output_ratio:.4f}"
             )
 
-    if expect_headings and not re.search(r"^#{1,6}[ \t]+\S", text, re.MULTILINE):
+    if expect_headings and not re.search(r"^ {0,3}#{1,6}[ \t]+\S", text, re.MULTILINE):
         warnings.append("No headings detected")
 
     for warning in warnings:
