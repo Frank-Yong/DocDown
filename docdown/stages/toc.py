@@ -38,7 +38,7 @@ def log_heading_diagnostics(markdown_dir: Path, merged_path: Path, *, logger: Lo
         try:
             with chunk_path.open("r", encoding="utf-8", newline="") as handle:
                 per_file_counts = _heading_level_counts(handle)
-        except OSError as exc:
+        except (OSError, UnicodeDecodeError) as exc:
             active_logger.warning("Heading diagnostics skipped unreadable chunk markdown %s: %s", chunk_path, exc)
             unreadable_chunks += 1
             continue
@@ -66,7 +66,7 @@ def log_heading_diagnostics(markdown_dir: Path, merged_path: Path, *, logger: Lo
     try:
         with merged.open("r", encoding="utf-8", newline="") as handle:
             merged_level_counts = _heading_level_counts(handle)
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         active_logger.warning("Heading diagnostics skipped unreadable merged markdown %s: %s", merged, exc)
         return
 
