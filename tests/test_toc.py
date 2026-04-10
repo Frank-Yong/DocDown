@@ -376,3 +376,24 @@ def test_log_heading_diagnostics_includes_unreadable_chunk_count(tmp_path, monke
     assert first[4] == 1
     assert first[5] == "h1:1"
     logger.warning.assert_called_once()
+
+
+def test_log_heading_diagnostics_skips_invalid_utf8_chunk_markdown(tmp_path):
+    markdown_dir = tmp_path / "markdown"
+    markdown_dir.mkdir()
+    (markdown_dir / "chunk-0001.md").write_bytes(b"\xff\xfe\x00")
+
+    merged = tmp_path / "merged.md"
+    merged.write_text("# A\n", encoding="utf-8")
+
+    logger = Mock()
+    log_heading_diagnostics(markdown_dir, merged, logger=logger)
+
+    first = logger.info.call_args_list[0].args
+    assert first[0].startswith("Heading diagnostics (chunks):")
+    assert first[1] == 1
+    assert first[2] == 0
+    assert first[3] == 0
+    assert first[4] == 1
+    assert first[5] == "none"
+    logger.warning.assert_called_once()

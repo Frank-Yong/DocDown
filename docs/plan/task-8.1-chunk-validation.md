@@ -10,15 +10,21 @@ Validate each chunk's Markdown output after conversion to detect missing or corr
 
 ## Acceptance Criteria
 
-- [ ] Each chunk Markdown file is checked after conversion.
-- [ ] Checks performed:
-  - Empty output (0 bytes) → marked as failed.
-  - Suspiciously small output (< `min_output_ratio` × chunk PDF size) → warning logged.
-  - Invalid UTF-8 encoding → marked as failed.
-  - No headings detected when chunk is expected to have structure → warning logged.
-- [ ] Validation results are attached to the `ChunkResult` for downstream reporting.
-- [ ] Validation does not modify the Markdown files.
-- [ ] Unit tests cover each check condition.
+- [x] Each chunk Markdown file is checked after conversion.
+- [x] Checks performed:
+    - [x] Empty output (0 bytes) → marked as failed.
+    - [x] Suspiciously small output (< `min_output_ratio` × chunk PDF size) → warning logged.
+    - [x] Invalid UTF-8 encoding → marked as failed.
+    - [x] No headings detected when chunk is expected to have structure → warning logged.
+- [x] Validation results are attached to the `ChunkResult` for downstream reporting.
+- [x] Validation does not modify the Markdown files.
+- [x] Unit tests cover each check condition.
+
+Implemented in:
+- `docdown/stages/chunk_validation.py`
+- `docdown/cli.py`
+- `tests/test_chunk_validation.py`
+- `tests/test_cli.py`
 
 ## Implementation Notes
 

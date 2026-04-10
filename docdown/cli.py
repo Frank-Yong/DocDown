@@ -5,9 +5,10 @@ from pathlib import Path
 import click
 
 from docdown.config import ConfigError, load_config
+from docdown.stages.chunk_validation import ChunkResult, validate_chunk
 from docdown.stages.cleanup import CleanupError, cleanup_markdown_file
 from docdown.stages.convert import PandocError, convert_to_markdown, ensure_pandoc_available
-from docdown.stages.extract import orchestrate_extraction
+from docdown.stages.extract import ExtractorUsed, orchestrate_extraction
 from docdown.stages.merge import MergeError, merge_chunks
 from docdown.stages.split import PdfSplitError, PdfValidationError, split_pdf, validate_pdf
 from docdown.stages.toc import TocError, generate_toc, log_heading_diagnostics
@@ -177,6 +178,8 @@ def main(
         raise click.ClickException(str(exc)) from exc
 
     converted_chunks = 0
+    converted_before_validation = 0
+    chunk_results: list[ChunkResult] = []
     for result in successful_extractions:
         markdown_path = work_dir.markdown(result.chunk_number)
         try:
@@ -194,15 +197,104 @@ def main(
                 heuristic_titlecase_headings=cfg.heuristic_titlecase_headings,
                 heuristic_allcaps_headings=cfg.heuristic_allcaps_headings,
             )
+        except UnicodeDecodeError:
+            logger.error("Markdown conversion/cleanup failed for chunk-%04d: Invalid UTF-8 encoding", result.chunk_number)
+            chunk_results.append(
+                ChunkResult(
+                    chunk_number=result.chunk_number,
+                    success=False,
+                    markdown_path=markdown_path,
+                    error="Invalid UTF-8 encoding",
+                    validation=None,
+                )
+            )
+            continue
         except (PandocError, CleanupError) as exc:
             logger.error("Markdown conversion/cleanup failed for chunk-%04d: %s", result.chunk_number, exc)
+            chunk_results.append(
+                ChunkResult(
+                    chunk_number=result.chunk_number,
+                    success=False,
+                    markdown_path=None,
+                    error=str(exc),
+                    validation=None,
+                )
+            )
             continue
+
+        converted_before_validation += 1
+
+        extractor_used = getattr(result, "extractor", None)
+        if isinstance(extractor_used, ExtractorUsed):
+            extractor_name = extractor_used.value
+        else:
+            extractor_name = str(extractor_used) if extractor_used is not None else None
+
+        chunk_validation = validate_chunk(
+            markdown_path,
+            split_result.chunk_paths[result.chunk_number - 1],
+            min_output_ratio=cfg.validation.min_output_ratio,
+            expect_headings=extractor_name != ExtractorUsed.PDFMINER.value,
+            logger=logger,
+            chunk_number=result.chunk_number,
+        )
+        if not chunk_validation.valid:
+            recoverable_validation_errors = {"Empty output", "Invalid UTF-8 encoding"}
+            non_recoverable_errors = [
+                issue for issue in chunk_validation.errors if issue not in recoverable_validation_errors
+            ]
+            if non_recoverable_errors:
+                raise click.ClickException(
+                    "Chunk validation failed for "
+                    f"chunk-{result.chunk_number:04d}: "
+                    f"{' ; '.join(non_recoverable_errors)}"
+                )
+
+            chunk_results.append(
+                ChunkResult(
+                    chunk_number=result.chunk_number,
+                    success=False,
+                    markdown_path=markdown_path,
+                    error="; ".join(chunk_validation.errors),
+                    validation=chunk_validation,
+                )
+            )
+            continue
+
+        chunk_results.append(
+            ChunkResult(
+                chunk_number=result.chunk_number,
+                success=True,
+                markdown_path=markdown_path,
+                error=None,
+                validation=chunk_validation,
+            )
+        )
         converted_chunks += 1
 
     if converted_chunks == 0:
+        if converted_before_validation > 0:
+            raise click.ClickException("All extracted chunks failed validation.")
         raise click.ClickException("Markdown conversion/cleanup failed for all extracted chunks.")
 
-    logger.info("Conversion summary: %s converted, %s extraction successes skipped/failed", converted_chunks, len(successful_extractions) - converted_chunks)
+    failed_chunks = [item for item in chunk_results if not item.success]
+    empty_failed_chunks = [
+        item
+        for item in failed_chunks
+        if item.validation is not None and "Empty output" in item.validation.errors
+    ]
+    if len(empty_failed_chunks) > cfg.validation.max_empty_chunks:
+        raise click.ClickException(
+            f"{len(empty_failed_chunks)} empty chunks failed validation (max allowed: {cfg.validation.max_empty_chunks})."
+        )
+
+    warning_count = sum(len(item.validation.warnings) for item in chunk_results if item.validation is not None)
+    logger.info(
+        "Conversion summary: %s converted, %s extraction successes skipped/failed, %s chunk validation warnings",
+        converted_chunks,
+        len(failed_chunks),
+        warning_count,
+    )
 
     try:
         merge_chunks(

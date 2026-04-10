@@ -85,5 +85,7 @@ def _chunk_part(source_dir: Path, chunk_number: int) -> str:
         if not normalized.strip():
             return _normalize_merge_part(f"<!-- chunk-{chunk_number:04d}: extraction failed -->")
         return normalized
+    except UnicodeDecodeError:
+        return _normalize_merge_part(f"<!-- chunk-{chunk_number:04d}: extraction failed -->")
     except OSError as exc:
         raise MergeError(f"Failed reading chunk markdown {chunk_path}: {exc}") from exc
