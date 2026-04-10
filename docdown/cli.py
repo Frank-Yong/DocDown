@@ -230,7 +230,7 @@ def main(
         else:
             extractor_name = str(extractor_used) if extractor_used is not None else None
 
-        validation = validate_chunk(
+        chunk_validation = validate_chunk(
             markdown_path,
             split_result.chunk_paths[result.chunk_number - 1],
             min_output_ratio=cfg.validation.min_output_ratio,
@@ -238,10 +238,10 @@ def main(
             logger=logger,
             chunk_number=result.chunk_number,
         )
-        if not validation.valid:
+        if not chunk_validation.valid:
             recoverable_validation_errors = {"Empty output", "Invalid UTF-8 encoding"}
             non_recoverable_errors = [
-                issue for issue in validation.errors if issue not in recoverable_validation_errors
+                issue for issue in chunk_validation.errors if issue not in recoverable_validation_errors
             ]
             if non_recoverable_errors:
                 raise click.ClickException(
@@ -255,8 +255,8 @@ def main(
                     chunk_number=result.chunk_number,
                     success=False,
                     markdown_path=markdown_path,
-                    error="; ".join(validation.errors),
-                    validation=validation,
+                    error="; ".join(chunk_validation.errors),
+                    validation=chunk_validation,
                 )
             )
             continue
@@ -267,7 +267,7 @@ def main(
                 success=True,
                 markdown_path=markdown_path,
                 error=None,
-                validation=validation,
+                validation=chunk_validation,
             )
         )
         converted_chunks += 1
