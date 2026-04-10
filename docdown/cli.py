@@ -178,6 +178,7 @@ def main(
         raise click.ClickException(str(exc)) from exc
 
     converted_chunks = 0
+    converted_before_validation = 0
     chunk_results: list[ChunkResult] = []
     for result in successful_extractions:
         markdown_path = work_dir.markdown(result.chunk_number)
@@ -208,6 +209,8 @@ def main(
                 )
             )
             continue
+
+        converted_before_validation += 1
 
         extractor_used = getattr(result, "extractor", None)
         if isinstance(extractor_used, ExtractorUsed):
@@ -258,6 +261,8 @@ def main(
         converted_chunks += 1
 
     if converted_chunks == 0:
+        if converted_before_validation > 0:
+            raise click.ClickException("All extracted chunks failed validation.")
         raise click.ClickException("Markdown conversion/cleanup failed for all extracted chunks.")
 
     failed_chunks = [item for item in chunk_results if not item.success]

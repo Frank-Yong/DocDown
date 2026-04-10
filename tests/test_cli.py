@@ -386,7 +386,7 @@ def test_cli_fails_when_all_chunks_fail_validation(tmp_path, monkeypatch):
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
 
     assert result.exit_code != 0
-    assert "Markdown conversion/cleanup failed for all extracted chunks" in result.output
+    assert "All extracted chunks failed validation." in result.output
 
 
 def test_cli_enforces_max_empty_chunks_threshold(tmp_path, monkeypatch):
