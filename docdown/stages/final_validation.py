@@ -64,8 +64,9 @@ def validate_final_output(
     except OSError as exc:
         raise FinalValidationError(f"Failed reading source PDF metadata: {exc}") from exc
 
+    toc_scan_lines = 120
     try:
-        final_text = final_markdown.read_text(encoding="utf-8")
+        final_prefix = _read_top_lines(final_markdown, max_lines=toc_scan_lines)
     except OSError as exc:
         raise FinalValidationError(f"Failed reading final markdown: {exc}") from exc
     except UnicodeDecodeError as exc:
@@ -89,7 +90,7 @@ def validate_final_output(
             f"{empty_failed_chunks} empty chunks failed validation (max allowed: {max_empty_chunks})."
         )
 
-    toc_present = _has_toc_near_top(final_text)
+    toc_present = _has_toc_near_top(final_prefix, max_scan_lines=toc_scan_lines)
     if not toc_present:
         warnings.append("Final output appears to be missing a TOC section near the top")
 
@@ -175,3 +176,18 @@ def _normalize_paragraph(text: str) -> str:
 
 def _word_count(text: str) -> int:
     return len(re.findall(r"\S+", text))
+
+
+def _read_top_lines(markdown_path: Path, *, max_lines: int) -> str:
+    if max_lines <= 0:
+        return ""
+
+    lines: list[str] = []
+    with markdown_path.open("r", encoding="utf-8", newline="") as handle:
+        for _ in range(max_lines):
+            line = handle.readline()
+            if not line:
+                break
+            lines.append(line)
+
+    return "".join(lines)
