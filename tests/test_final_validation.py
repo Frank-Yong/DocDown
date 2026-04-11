@@ -170,3 +170,40 @@ def test_validate_final_output_flags_duplicate_boundary_paragraph(tmp_path):
     assert result.valid is True
     assert result.duplicate_boundary_count == 1
     assert any("Potential duplicate boundary paragraph" in warning for warning in result.warnings)
+
+
+def test_validate_final_output_reads_each_chunk_once_for_boundary_checks(tmp_path, monkeypatch):
+    source_pdf = tmp_path / "source.pdf"
+    source_pdf.write_bytes(b"%PDF-1.4\n" + b"x" * 100)
+    final_md = tmp_path / "final.md"
+    final_md.write_text("- [Section](#section)\n\n# Section\n", encoding="utf-8")
+
+    repeated_paragraph = " ".join(["word"] * 51)
+    chunk_1 = tmp_path / "chunk-0001.md"
+    chunk_2 = tmp_path / "chunk-0002.md"
+    chunk_3 = tmp_path / "chunk-0003.md"
+    chunk_1.write_text(f"# H1\n\n{repeated_paragraph}\n", encoding="utf-8")
+    chunk_2.write_text(f"# H2\n\n{repeated_paragraph}\n", encoding="utf-8")
+    chunk_3.write_text("# H3\n\nunique words only\n", encoding="utf-8")
+
+    read_counts: dict[Path, int] = {chunk_1: 0, chunk_2: 0, chunk_3: 0}
+    original_read_text = Path.read_text
+
+    def _count_reads(self, *args, **kwargs):
+        if self in read_counts:
+            read_counts[self] += 1
+        return original_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", _count_reads)
+
+    validate_final_output(
+        final_md,
+        source_pdf,
+        [_chunk_result(1, chunk_1), _chunk_result(2, chunk_2), _chunk_result(3, chunk_3)],
+        max_empty_chunks=0,
+        logger=Mock(),
+    )
+
+    assert read_counts[chunk_1] == 1
+    assert read_counts[chunk_2] == 1
+    assert read_counts[chunk_3] == 1

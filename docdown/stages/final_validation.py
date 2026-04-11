@@ -129,9 +129,14 @@ def _has_toc_near_top(markdown_text: str, *, max_scan_lines: int = 120) -> bool:
 def _detect_duplicate_boundaries(chunk_results: Iterable[ChunkResult], *, logger: LogLike) -> list[str]:
     warnings: list[str] = []
     chunk_list = list(chunk_results)
+    boundary_cache = {
+        chunk.chunk_number: _read_chunk_boundary_paragraphs(chunk.markdown_path, logger=logger)
+        for chunk in chunk_list
+    }
+
     for left, right in zip(chunk_list, chunk_list[1:]):
-        left_paragraph = _read_boundary_paragraph(left.markdown_path, from_end=True, logger=logger)
-        right_paragraph = _read_boundary_paragraph(right.markdown_path, from_end=False, logger=logger)
+        left_paragraph, _ = boundary_cache[left.chunk_number]
+        _, right_paragraph = boundary_cache[right.chunk_number]
         if left_paragraph is None or right_paragraph is None:
             continue
         if left_paragraph == right_paragraph:
@@ -167,6 +172,28 @@ def _read_boundary_paragraph(
         return None
 
     return candidates[-1] if from_end else candidates[0]
+
+
+def _read_chunk_boundary_paragraphs(markdown_path: Path | None, *, logger: LogLike) -> tuple[str | None, str | None]:
+    if markdown_path is None:
+        return None, None
+
+    path = Path(markdown_path)
+    if not path.exists() or not path.is_file():
+        return None, None
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        logger.warning("Final validation skipped unreadable chunk markdown %s: %s", path, exc)
+        return None, None
+
+    paragraphs = [_normalize_paragraph(part) for part in re.split(r"\n\s*\n", text)]
+    candidates = [paragraph for paragraph in paragraphs if _word_count(paragraph) > 50]
+    if not candidates:
+        return None, None
+
+    return candidates[-1], candidates[0]
 
 
 def _normalize_paragraph(text: str) -> str:
