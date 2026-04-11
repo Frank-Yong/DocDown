@@ -147,33 +147,6 @@ def _detect_duplicate_boundaries(chunk_results: Iterable[ChunkResult], *, logger
     return warnings
 
 
-def _read_boundary_paragraph(
-    markdown_path: Path | None,
-    *,
-    from_end: bool,
-    logger: LogLike,
-) -> str | None:
-    if markdown_path is None:
-        return None
-
-    path = Path(markdown_path)
-    if not path.exists() or not path.is_file():
-        return None
-
-    try:
-        text = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError) as exc:
-        logger.warning("Final validation skipped unreadable chunk markdown %s: %s", path, exc)
-        return None
-
-    paragraphs = [_normalize_paragraph(part) for part in re.split(r"\n\s*\n", text)]
-    candidates = [paragraph for paragraph in paragraphs if _word_count(paragraph) > 50]
-    if not candidates:
-        return None
-
-    return candidates[-1] if from_end else candidates[0]
-
-
 def _read_chunk_boundary_paragraphs(markdown_path: Path | None, *, logger: LogLike) -> tuple[str | None, str | None]:
     if markdown_path is None:
         return None, None
