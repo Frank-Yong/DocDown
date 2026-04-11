@@ -10,12 +10,18 @@ Validate the merged final Markdown output for completeness and structural integr
 
 ## Acceptance Criteria
 
-- [ ] `final.md` file size is checked: if < 1% of source PDF size, log a warning.
-- [ ] Failed chunk count is checked against `max_empty_chunks` config; if exceeded, abort.
-- [ ] TOC presence is verified (at least one `- [` link pattern at the top of the file).
-- [ ] Duplicate content detection: identical paragraphs (>50 words) in adjacent chunk boundaries are flagged.
-- [ ] All validation results are collected for the run summary.
-- [ ] Unit tests cover each check.
+- [x] `final.md` file size is checked: if < 1% of source PDF size, log a warning.
+- [x] Failed chunk count is checked against `max_empty_chunks` config; if exceeded, abort.
+- [x] TOC presence is verified (at least one `- [` link pattern at the top of the file).
+- [x] Duplicate content detection: identical paragraphs (>50 words) in adjacent chunk boundaries are flagged.
+- [x] All validation results are collected for the run summary.
+- [x] Unit tests cover each check.
+
+Implemented in:
+- `docdown/stages/final_validation.py`
+- `docdown/cli.py`
+- `tests/test_final_validation.py`
+- `tests/test_cli.py`
 
 ## Implementation Notes
 

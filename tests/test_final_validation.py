@@ -1,0 +1,124 @@
+"""Tests for Stage 8.2 final output validation."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from unittest.mock import Mock
+
+from docdown.stages.chunk_validation import ChunkResult, ChunkValidationResult
+from docdown.stages.final_validation import validate_final_output
+
+
+def _chunk_result(
+    chunk_number: int,
+    markdown_path: Path,
+    *,
+    success: bool = True,
+    error: str | None = None,
+    validation_errors: tuple[str, ...] = (),
+) -> ChunkResult:
+    validation = ChunkValidationResult(
+        valid=not validation_errors,
+        errors=validation_errors,
+        warnings=(),
+    )
+    return ChunkResult(
+        chunk_number=chunk_number,
+        success=success,
+        markdown_path=markdown_path,
+        error=error,
+        validation=validation,
+    )
+
+
+def test_validate_final_output_warns_when_final_is_too_small(tmp_path):
+    source_pdf = tmp_path / "source.pdf"
+    source_pdf.write_bytes(b"%PDF-1.4\n" + b"x" * 10000)
+    final_md = tmp_path / "final.md"
+    final_md.write_text("- [Section](#section)\n\n# Section\n", encoding="utf-8")
+
+    chunk_path = tmp_path / "chunk-0001.md"
+    chunk_path.write_text("# Heading\n\nBody\n", encoding="utf-8")
+    chunk_results = [_chunk_result(1, chunk_path)]
+
+    result = validate_final_output(
+        final_md,
+        source_pdf,
+        chunk_results,
+        max_empty_chunks=0,
+        logger=Mock(),
+    )
+
+    assert result.valid is True
+    assert any("Final output ratio" in warning for warning in result.warnings)
+
+
+def test_validate_final_output_fails_when_empty_chunk_failures_exceed_threshold(tmp_path):
+    source_pdf = tmp_path / "source.pdf"
+    source_pdf.write_bytes(b"%PDF-1.4\n" + b"x" * 100)
+    final_md = tmp_path / "final.md"
+    final_md.write_text("- [Section](#section)\n\n# Section\n", encoding="utf-8")
+
+    chunk_path = tmp_path / "chunk-0001.md"
+    chunk_path.write_text("# Heading\n\nBody\n", encoding="utf-8")
+    chunk_results = [
+        _chunk_result(1, chunk_path, success=False, error="empty", validation_errors=("Empty output",)),
+        _chunk_result(2, chunk_path, success=True),
+    ]
+
+    result = validate_final_output(
+        final_md,
+        source_pdf,
+        chunk_results,
+        max_empty_chunks=0,
+        logger=Mock(),
+    )
+
+    assert result.valid is False
+    assert result.errors == ("1 empty chunks failed validation (max allowed: 0).",)
+
+
+def test_validate_final_output_warns_when_toc_links_missing_near_top(tmp_path):
+    source_pdf = tmp_path / "source.pdf"
+    source_pdf.write_bytes(b"%PDF-1.4\n" + b"x" * 100)
+    final_md = tmp_path / "final.md"
+    final_md.write_text("# Heading\n\nNo TOC links here.\n", encoding="utf-8")
+
+    chunk_path = tmp_path / "chunk-0001.md"
+    chunk_path.write_text("# Heading\n\nBody\n", encoding="utf-8")
+
+    result = validate_final_output(
+        final_md,
+        source_pdf,
+        [_chunk_result(1, chunk_path)],
+        max_empty_chunks=0,
+        logger=Mock(),
+    )
+
+    assert result.valid is True
+    assert "Final output appears to be missing a TOC section near the top" in result.warnings
+
+
+def test_validate_final_output_flags_duplicate_boundary_paragraph(tmp_path):
+    source_pdf = tmp_path / "source.pdf"
+    source_pdf.write_bytes(b"%PDF-1.4\n" + b"x" * 100)
+    final_md = tmp_path / "final.md"
+    final_md.write_text("- [Section](#section)\n\n# Section\n", encoding="utf-8")
+
+    repeated_paragraph = " ".join(["word"] * 51)
+    chunk_1 = tmp_path / "chunk-0001.md"
+    chunk_2 = tmp_path / "chunk-0002.md"
+    chunk_1.write_text(f"# Heading\n\nIntro\n\n{repeated_paragraph}\n", encoding="utf-8")
+    chunk_2.write_text(f"{repeated_paragraph}\n\nMore text\n", encoding="utf-8")
+
+    result = validate_final_output(
+        final_md,
+        source_pdf,
+        [_chunk_result(1, chunk_1), _chunk_result(2, chunk_2)],
+        max_empty_chunks=0,
+        logger=Mock(),
+    )
+
+    assert result.valid is True
+    assert result.duplicate_boundary_count == 1
+    assert any("Potential duplicate boundary paragraph" in warning for warning in result.warnings)
