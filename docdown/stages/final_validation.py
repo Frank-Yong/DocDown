@@ -9,6 +9,7 @@ import re
 from typing import Iterable
 
 from docdown.stages.chunk_validation import ChunkResult
+from docdown.stages.toc import has_visible_toc_near_top
 from docdown.utils.logging import get_logger
 
 
@@ -121,9 +122,7 @@ def _count_empty_failed_chunks(chunk_results: Iterable[ChunkResult]) -> int:
 
 
 def _has_toc_near_top(markdown_text: str, *, max_scan_lines: int = 120) -> bool:
-    lines = markdown_text.splitlines()[:max_scan_lines]
-    toc_link_pattern = re.compile(r"^\s*-\s+\[[^\]]+\]\([^\)]+\)")
-    return any(toc_link_pattern.search(line) is not None for line in lines)
+    return has_visible_toc_near_top(markdown_text, max_scan_lines=max_scan_lines)
 
 
 def _detect_duplicate_boundaries(chunk_results: Iterable[ChunkResult], *, logger: LogLike) -> list[str]:

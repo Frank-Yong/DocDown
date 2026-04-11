@@ -99,6 +99,54 @@ def test_validate_final_output_warns_when_toc_links_missing_near_top(tmp_path):
     assert "Final output appears to be missing a TOC section near the top" in result.warnings
 
 
+def test_validate_final_output_does_not_treat_external_link_list_as_toc(tmp_path):
+    source_pdf = tmp_path / "source.pdf"
+    source_pdf.write_bytes(b"%PDF-1.4\n" + b"x" * 100)
+    final_md = tmp_path / "final.md"
+    final_md.write_text(
+        "## Resources\n\n- [Website](https://example.com)\n- [Repo](https://github.com/example/repo)\n\n# Heading\n",
+        encoding="utf-8",
+    )
+
+    chunk_path = tmp_path / "chunk-0001.md"
+    chunk_path.write_text("# Heading\n\nBody\n", encoding="utf-8")
+
+    result = validate_final_output(
+        final_md,
+        source_pdf,
+        [_chunk_result(1, chunk_path)],
+        max_empty_chunks=0,
+        logger=Mock(),
+    )
+
+    assert result.valid is True
+    assert "Final output appears to be missing a TOC section near the top" in result.warnings
+
+
+def test_validate_final_output_accepts_star_bullet_anchor_toc(tmp_path):
+    source_pdf = tmp_path / "source.pdf"
+    source_pdf.write_bytes(b"%PDF-1.4\n" + b"x" * 100)
+    final_md = tmp_path / "final.md"
+    final_md.write_text(
+        "## Table of Contents\n\n* [Intro](#intro)\n\n# Intro\n",
+        encoding="utf-8",
+    )
+
+    chunk_path = tmp_path / "chunk-0001.md"
+    chunk_path.write_text("# Intro\n\nBody\n", encoding="utf-8")
+
+    result = validate_final_output(
+        final_md,
+        source_pdf,
+        [_chunk_result(1, chunk_path)],
+        max_empty_chunks=0,
+        logger=Mock(),
+    )
+
+    assert result.valid is True
+    assert "Final output appears to be missing a TOC section near the top" not in result.warnings
+
+
 def test_validate_final_output_flags_duplicate_boundary_paragraph(tmp_path):
     source_pdf = tmp_path / "source.pdf"
     source_pdf.write_bytes(b"%PDF-1.4\n" + b"x" * 100)

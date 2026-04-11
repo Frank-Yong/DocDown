@@ -332,6 +332,12 @@ def _count_visible_toc_entries_near_top(markdown_text: str, *, max_scan_lines: i
     return 0
 
 
+def has_visible_toc_near_top(markdown_text: str, *, max_scan_lines: int = 120) -> bool:
+    """Return True when a TOC-like anchor list is visible near the top of markdown."""
+
+    return _count_visible_toc_entries_near_top(markdown_text, max_scan_lines=max_scan_lines) > 0
+
+
 def _build_python_toc_block(entries: list[tuple[int, str, str]]) -> str:
     if not entries:
         return ""
