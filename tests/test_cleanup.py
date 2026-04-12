@@ -204,3 +204,16 @@ def test_reconstruct_headings_skips_indented_code_block_lines():
 
     assert cleaned.startswith("    1.2 Scope")
     assert "## 1.2 Scope" not in cleaned
+
+
+def test_remove_repeated_header_footer_lines_keeps_single_non_empty_block_with_trailing_formfeed():
+    text = (
+        "Section 1\n\n"
+        "This is a longer paragraph with enough words to remain intact after cleanup.\n"
+        "\n\f\n"
+    )
+
+    cleaned = remove_repeated_header_footer_lines(text)
+
+    assert "Section 1" in cleaned
+    assert "This is a longer paragraph" in cleaned

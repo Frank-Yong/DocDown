@@ -94,6 +94,15 @@ The key changes from the original ordering:
 | 7.1–7.2 (Parallelism) | Sequential processing works correctly. Parallelism is a performance optimization. |
 | 9.1–9.3 (LLM) | Entirely independent alternative path. |
 
+### Additional follow-up tasks identified from real PDF runs
+
+These are outside the fast-track acceptance scope and should be handled as follow-up work unless already covered by a later phase task.
+
+| Follow-up task | Scope | Why deferred from fast-track |
+|---|---|---|
+| FU-01 Printed TOC cleanup and isolation | Detect and remove/relocate extracted printed TOC pages (dot-leader + page-number blocks) so they do not pollute body content in `final.md`. | Fast-track validates pipeline completeness, not high-fidelity layout reconstruction for vendor manuals with printed TOC artifacts. |
+| FU-02 TOC quality and recognition hardening | Improve generated TOC reliability when source content has weak heading signals, including fallback heuristics and marker handling for TOC-presence checks. | Current TOC path is functionally complete for fast-track; quality hardening is polish work tied to document-specific extraction quality. |
+
 ### Integration note — failure isolation in Phase 1
 
 Task 7.2 (failure isolation) is deferred to Phase 2 with the worker pool, but Phase 1 still needs basic error handling in the sequential chunk loop. The extraction orchestration (3.3) already tracks per-chunk success/failure and the sequential loop should skip failed chunks at merge time (6.1 already handles this via placeholder comments). No additional task is needed — 3.3 and 6.1 cover it.

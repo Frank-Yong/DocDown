@@ -239,7 +239,7 @@ def remove_repeated_header_footer_lines(
     if not occurrences:
         return text
 
-    if considered_blocks == 0:
+    if considered_blocks < 2:
         return text
 
     threshold = considered_blocks / 2
