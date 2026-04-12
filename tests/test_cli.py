@@ -204,6 +204,51 @@ def test_cli_fails_when_all_extractions_fail(tmp_path, monkeypatch):
     assert "Extraction failed for all chunks" in result.output
 
 
+def test_cli_run_summary_counts_extraction_failures(tmp_path, monkeypatch):
+    dummy_pdf = tmp_path / "test.pdf"
+    dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+    extracted_path = tmp_path / "out" / "extracted" / "chunk-0001.xml"
+
+    monkeypatch.setattr(
+        "docdown.cli.validate_pdf",
+        lambda *args, **kwargs: SimpleNamespace(page_count=2, file_size_bytes=dummy_pdf.stat().st_size),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.split_pdf",
+        lambda *args, **kwargs: SimpleNamespace(
+            chunk_count=2,
+            chunk_paths=(
+                tmp_path / "out" / "chunks" / "chunk-0001.pdf",
+                tmp_path / "out" / "chunks" / "chunk-0002.pdf",
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.orchestrate_extraction",
+        lambda *args, **kwargs: [
+            SimpleNamespace(chunk_number=1, success=True, output_path=extracted_path, error=None, extractor="grobid"),
+            SimpleNamespace(chunk_number=2, success=False, output_path=None, error="extractor timeout"),
+        ],
+    )
+    monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
+
+    def _fake_convert(input_path, output_path, **kwargs):
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text("# ok", encoding="utf-8")
+        return Path(output_path)
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
+    monkeypatch.setattr("docdown.cli.generate_toc", _fake_generate_toc)
+
+    runner = CliRunner()
+    result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
+
+    assert result.exit_code == 0
+    assert "Chunks:         2" in result.stderr
+    assert "Successful:     1" in result.stderr
+    assert "Failed:         1 (chunk-0002: extractor timeout)" in result.stderr
+
+
 def test_cli_fails_when_all_conversion_or_cleanup_steps_fail(tmp_path, monkeypatch):
     dummy_pdf = tmp_path / "test.pdf"
     dummy_pdf.write_bytes(b"%PDF-1.4 dummy")

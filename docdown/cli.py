@@ -176,6 +176,18 @@ def main(
         logger=logger,
     )
 
+    extraction_failure_results = [
+        ChunkResult(
+            chunk_number=result.chunk_number,
+            success=False,
+            markdown_path=None,
+            error=getattr(result, "error", None),
+            validation=None,
+        )
+        for result in extraction_results
+        if not result.success
+    ]
+
     successful_extractions = [
         result for result in extraction_results if result.success and result.output_path is not None
     ]
@@ -287,11 +299,11 @@ def main(
             raise click.ClickException("All extracted chunks failed validation.")
         raise click.ClickException("Markdown conversion/cleanup failed for all extracted chunks.")
 
-    failed_chunks = [item for item in chunk_results if not item.success]
+    failed_chunks = [*extraction_failure_results, *(item for item in chunk_results if not item.success)]
 
     warning_count = sum(len(item.validation.warnings) for item in chunk_results if item.validation is not None)
     logger.info(
-        "Conversion summary: %s converted, %s extraction successes skipped/failed, %s chunk validation warnings",
+        "Conversion summary: %s converted, %s chunks failed across extraction/conversion/validation, %s chunk validation warnings",
         converted_chunks,
         len(failed_chunks),
         warning_count,
@@ -327,7 +339,7 @@ def main(
         final_validation = validate_final_output(
             work_dir.final_markdown(),
             staged_input,
-            chunk_results,
+            [*extraction_failure_results, *chunk_results],
             max_empty_chunks=cfg.validation.max_empty_chunks,
             min_output_ratio=cfg.validation.min_output_ratio,
             logger=logger,
