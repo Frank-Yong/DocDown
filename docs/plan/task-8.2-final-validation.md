@@ -11,8 +11,8 @@ Validate the merged final Markdown output for completeness and structural integr
 ## Acceptance Criteria
 
 - [x] `final.md` file size is checked: if < 1% of source PDF size, log a warning.
-- [x] Failed chunk count is checked against `max_empty_chunks` config; if exceeded, abort.
-- [x] TOC presence is verified (at least one `- [` link pattern at the top of the file).
+- [x] Empty-output chunk failures are checked against `max_empty_chunks`; if exceeded, abort.
+- [x] TOC presence is verified using the TOC-stage visibility heuristics near the top of the file (internal `(#...)` anchor links, `-`/`*` bullets, and marker-aware entry counting).
 - [x] Duplicate content detection: identical paragraphs (>50 words) in adjacent chunk boundaries are flagged.
 - [x] All validation results are collected for the run summary.
 - [x] Unit tests cover each check.
@@ -40,11 +40,24 @@ def validate_final(final_path, source_pdf_path, chunk_results, config):
 ### Failed chunk threshold
 
 ```python
-    failed_count = sum(1 for r in chunk_results if not r.success)
-    if failed_count > config.validation.max_empty_chunks:
+    empty_failed_count = sum(
+        1
+        for r in chunk_results
+        if not r.success and r.validation and "Empty output" in r.validation.errors
+    )
+    if empty_failed_count > config.validation.max_empty_chunks:
         raise FatalPipelineError(
-            f"{failed_count} chunks failed (max allowed: {config.validation.max_empty_chunks})"
+            f"{empty_failed_count} empty chunks failed (max allowed: {config.validation.max_empty_chunks})"
         )
+```
+
+### TOC presence check
+
+```python
+    # Reuse the same visibility logic as Stage 6.2 TOC checks.
+    toc_present = has_visible_toc_near_top(final_prefix, max_scan_lines=120)
+    if not toc_present:
+        warnings.append("Final output appears to be missing a TOC section near the top")
 ```
 
 ### Duplicate detection
