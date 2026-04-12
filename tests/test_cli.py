@@ -7,10 +7,20 @@ from click.testing import CliRunner
 from docdown import __version__
 from docdown.cli import main
 from docdown.stages.convert import PandocError
+from docdown.stages.final_validation import FinalValidationError
 from docdown.stages.merge import MergeError
 from docdown.stages.split import PdfSplitError
 from docdown.stages.split import PdfValidationError
 from docdown.stages.toc import TocError
+
+
+def _fake_generate_toc(merged_path, final_path, **kwargs):
+    _ = merged_path
+    _ = kwargs
+    final = Path(final_path)
+    final.parent.mkdir(parents=True, exist_ok=True)
+    final.write_text("- [Section](#section)\n\n# Section\n", encoding="utf-8")
+    return final
 
 
 def test_cli_shows_version(tmp_path, monkeypatch):
@@ -44,7 +54,7 @@ def test_cli_shows_version(tmp_path, monkeypatch):
         return Path(output_path)
 
     monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
-    monkeypatch.setattr("docdown.cli.generate_toc", lambda *args, **kwargs: Path(args[1]))
+    monkeypatch.setattr("docdown.cli.generate_toc", _fake_generate_toc)
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
@@ -108,7 +118,7 @@ def test_cli_accepts_log_level_flag(tmp_path, monkeypatch):
         return Path(output_path)
 
     monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
-    monkeypatch.setattr("docdown.cli.generate_toc", lambda *args, **kwargs: Path(args[1]))
+    monkeypatch.setattr("docdown.cli.generate_toc", _fake_generate_toc)
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out"), "--log-level", "debug"])
@@ -272,7 +282,7 @@ def test_cli_continues_when_cleanup_hits_invalid_utf8_for_one_chunk(tmp_path, mo
         "docdown.cli.validate_chunk",
         lambda *args, **kwargs: SimpleNamespace(valid=True, warnings=(), errors=()),
     )
-    monkeypatch.setattr("docdown.cli.generate_toc", lambda *args, **kwargs: Path(args[1]))
+    monkeypatch.setattr("docdown.cli.generate_toc", _fake_generate_toc)
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
@@ -393,7 +403,7 @@ def test_cli_continues_when_chunk_validation_warns(tmp_path, monkeypatch):
         "docdown.cli.validate_chunk",
         lambda *args, **kwargs: SimpleNamespace(valid=True, warnings=("No headings detected",), errors=()),
     )
-    monkeypatch.setattr("docdown.cli.generate_toc", lambda *args, **kwargs: Path(args[1]))
+    monkeypatch.setattr("docdown.cli.generate_toc", _fake_generate_toc)
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
@@ -481,6 +491,7 @@ def test_cli_enforces_max_empty_chunks_threshold(tmp_path, monkeypatch):
         return Path(output_path)
 
     monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
+    monkeypatch.setattr("docdown.cli.generate_toc", _fake_generate_toc)
 
     def _fake_validate_chunk(*args, **kwargs):
         if kwargs["chunk_number"] == 1:
@@ -547,7 +558,7 @@ def test_cli_does_not_count_non_empty_validation_failures_toward_max_empty_chunk
         return SimpleNamespace(valid=True, warnings=(), errors=())
 
     monkeypatch.setattr("docdown.cli.validate_chunk", _fake_validate_chunk)
-    monkeypatch.setattr("docdown.cli.generate_toc", lambda *args, **kwargs: Path(args[1]))
+    monkeypatch.setattr("docdown.cli.generate_toc", _fake_generate_toc)
 
     runner = CliRunner()
     result = runner.invoke(
@@ -611,6 +622,45 @@ def test_cli_fails_fast_on_non_recoverable_chunk_validation_errors(tmp_path, mon
     assert "Markdown output is not a file" in result.output
 
 
+def test_cli_surfaces_final_validation_errors(tmp_path, monkeypatch):
+    dummy_pdf = tmp_path / "test.pdf"
+    dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
+    extracted_path = tmp_path / "out" / "extracted" / "chunk-0001.xml"
+
+    monkeypatch.setattr(
+        "docdown.cli.validate_pdf",
+        lambda *args, **kwargs: SimpleNamespace(page_count=1, file_size_bytes=dummy_pdf.stat().st_size),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.split_pdf",
+        lambda *args, **kwargs: SimpleNamespace(chunk_count=1, chunk_paths=(tmp_path / "out" / "chunks" / "chunk-0001.pdf",)),
+    )
+    monkeypatch.setattr(
+        "docdown.cli.orchestrate_extraction",
+        lambda *args, **kwargs: [SimpleNamespace(chunk_number=1, success=True, output_path=extracted_path, extractor="grobid")],
+    )
+    monkeypatch.setattr("docdown.cli.ensure_pandoc_available", lambda *args, **kwargs: None)
+
+    def _fake_convert(input_path, output_path, **kwargs):
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text("# ok", encoding="utf-8")
+        return Path(output_path)
+
+    monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
+    monkeypatch.setattr("docdown.cli.generate_toc", _fake_generate_toc)
+
+    def _raise_final_validation_error(*args, **kwargs):
+        raise FinalValidationError("final validation failed")
+
+    monkeypatch.setattr("docdown.cli.validate_final_output", _raise_final_validation_error)
+
+    runner = CliRunner()
+    result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
+
+    assert result.exit_code != 0
+    assert "final validation failed" in result.output
+
+
 def test_cli_autoloads_repo_config_when_flag_omitted(tmp_path, monkeypatch):
     dummy_pdf = tmp_path / "test.pdf"
     dummy_pdf.write_bytes(b"%PDF-1.4 dummy")
@@ -658,7 +708,7 @@ def test_cli_autoloads_repo_config_when_flag_omitted(tmp_path, monkeypatch):
         return Path(output_path)
 
     monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
-    monkeypatch.setattr("docdown.cli.generate_toc", lambda *args, **kwargs: Path(args[1]))
+    monkeypatch.setattr("docdown.cli.generate_toc", _fake_generate_toc)
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
@@ -713,7 +763,7 @@ def test_cli_uses_explicit_config_path_when_provided(tmp_path, monkeypatch):
         return Path(output_path)
 
     monkeypatch.setattr("docdown.cli.convert_to_markdown", _fake_convert)
-    monkeypatch.setattr("docdown.cli.generate_toc", lambda *args, **kwargs: Path(args[1]))
+    monkeypatch.setattr("docdown.cli.generate_toc", _fake_generate_toc)
 
     runner = CliRunner()
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out"), "--config", str(explicit_config)])

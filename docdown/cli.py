@@ -9,6 +9,7 @@ from docdown.stages.chunk_validation import ChunkResult, validate_chunk
 from docdown.stages.cleanup import CleanupError, cleanup_markdown_file
 from docdown.stages.convert import PandocError, convert_to_markdown, ensure_pandoc_available
 from docdown.stages.extract import ExtractorUsed, orchestrate_extraction
+from docdown.stages.final_validation import FinalValidationError, validate_final_output
 from docdown.stages.merge import MergeError, merge_chunks
 from docdown.stages.split import PdfSplitError, PdfValidationError, split_pdf, validate_pdf
 from docdown.stages.toc import TocError, generate_toc, log_heading_diagnostics
@@ -278,15 +279,6 @@ def main(
         raise click.ClickException("Markdown conversion/cleanup failed for all extracted chunks.")
 
     failed_chunks = [item for item in chunk_results if not item.success]
-    empty_failed_chunks = [
-        item
-        for item in failed_chunks
-        if item.validation is not None and "Empty output" in item.validation.errors
-    ]
-    if len(empty_failed_chunks) > cfg.validation.max_empty_chunks:
-        raise click.ClickException(
-            f"{len(empty_failed_chunks)} empty chunks failed validation (max allowed: {cfg.validation.max_empty_chunks})."
-        )
 
     warning_count = sum(len(item.validation.warnings) for item in chunk_results if item.validation is not None)
     logger.info(
@@ -321,6 +313,29 @@ def main(
         )
     except TocError as exc:
         raise click.ClickException(str(exc)) from exc
+
+    try:
+        final_validation = validate_final_output(
+            work_dir.final_markdown(),
+            staged_input,
+            chunk_results,
+            max_empty_chunks=cfg.validation.max_empty_chunks,
+            min_output_ratio=cfg.validation.min_output_ratio,
+            logger=logger,
+        )
+    except FinalValidationError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if not final_validation.valid:
+        raise click.ClickException(" ; ".join(final_validation.errors))
+
+    logger.info(
+        "Final validation summary: warnings=%s toc_present=%s duplicate_boundaries=%s failed_chunks=%s",
+        len(final_validation.warnings),
+        final_validation.toc_present,
+        final_validation.duplicate_boundary_count,
+        final_validation.failed_chunk_count,
+    )
 
 
 def _version():
