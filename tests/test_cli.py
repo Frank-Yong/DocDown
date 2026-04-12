@@ -67,9 +67,11 @@ def test_cli_shows_version(tmp_path, monkeypatch):
     assert f"DocDown v{__version__}" in result.stderr
     assert "Input:" in result.stderr
     assert "Workdir:" in result.stderr
+    assert "DocDown Run Summary" in result.stderr
 
     log_file = tmp_path / "out" / "run.log"
     assert log_file.exists()
+    assert "DocDown Run Summary" in log_file.read_text(encoding="utf-8")
 
 
 def test_cli_rejects_file_path_for_workdir(tmp_path):

@@ -1,6 +1,7 @@
 """CLI entry point for DocDown."""
 
 from pathlib import Path
+from time import perf_counter
 
 import click
 
@@ -11,6 +12,12 @@ from docdown.stages.convert import PandocError, convert_to_markdown, ensure_pand
 from docdown.stages.extract import ExtractorUsed, orchestrate_extraction
 from docdown.stages.final_validation import FinalValidationError, validate_final_output
 from docdown.stages.merge import MergeError, merge_chunks
+from docdown.stages.run_summary import (
+    RunSummaryContext,
+    RunSummaryError,
+    append_run_summary,
+    generate_run_summary,
+)
 from docdown.stages.split import PdfSplitError, PdfValidationError, split_pdf, validate_pdf
 from docdown.stages.toc import TocError, generate_toc, log_heading_diagnostics
 from docdown.utils.logging import configure_logging
@@ -85,6 +92,8 @@ def main(
     max_empty_chunks,
 ):
     """Convert a PDF to Markdown."""
+
+    run_start = perf_counter()
 
     cli_overrides = {
         "input": input_pdf,
@@ -336,6 +345,33 @@ def main(
         final_validation.duplicate_boundary_count,
         final_validation.failed_chunk_count,
     )
+
+    try:
+        output_size_bytes = work_dir.final_markdown().stat().st_size
+    except OSError:
+        output_size_bytes = 0
+
+    tables_found = len(list(work_dir.tables_dir.glob("chunk-*-table-*.md")))
+    total_warning_count = warning_count + len(final_validation.warnings)
+    summary_context = RunSummaryContext(
+        input_path=staged_input,
+        input_size_bytes=validation.file_size_bytes,
+        total_pages=validation.page_count,
+        total_chunks=split_result.chunk_count,
+        successful_chunks=converted_chunks,
+        failed_chunks=tuple(failed_chunks),
+        tables_found=tables_found,
+        output_path=work_dir.final_markdown(),
+        output_size_bytes=output_size_bytes,
+        duration_seconds=perf_counter() - run_start,
+        warning_count=total_warning_count,
+    )
+    summary_text = generate_run_summary(summary_context)
+    click.echo(summary_text, err=True)
+    try:
+        append_run_summary(cfg.workdir / "run.log", summary_text)
+    except RunSummaryError as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 def _version():

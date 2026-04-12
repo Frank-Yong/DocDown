@@ -10,12 +10,18 @@ Generate and display a human-readable summary of the pipeline run.
 
 ## Acceptance Criteria
 
-- [ ] Summary is printed to stderr at the end of the run.
-- [ ] Summary is also appended to `run.log`.
-- [ ] Summary includes: input file name and size, total pages, chunk count, successful/failed chunks, tables found, output file size, total duration, and warning count.
-- [ ] Failed chunks are listed with their error messages.
-- [ ] Summary format is consistent and parseable.
-- [ ] Unit test verifies summary format with mock data.
+- [x] Summary is printed to stderr at the end of the run.
+- [x] Summary is also appended to `run.log`.
+- [x] Summary includes: input file name and size, total pages, chunk count, successful/failed chunks, tables found, output file size, total duration, and warning count.
+- [x] Failed chunks are listed with their error messages.
+- [x] Summary format is consistent and parseable.
+- [x] Unit test verifies summary format with mock data.
+
+Implemented in:
+- `docdown/stages/run_summary.py`
+- `docdown/cli.py`
+- `tests/test_run_summary.py`
+- `tests/test_cli.py`
 
 ## Implementation Notes
 
