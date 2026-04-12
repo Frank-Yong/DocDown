@@ -53,6 +53,31 @@ def test_validate_final_output_warns_when_final_is_too_small(tmp_path):
     assert any("Final output ratio" in warning for warning in result.warnings)
 
 
+def test_validate_final_output_uses_configurable_min_output_ratio(tmp_path):
+    source_pdf = tmp_path / "source.pdf"
+    source_pdf.write_bytes(b"%PDF-1.4\n" + b"x" * 100)
+    final_md = tmp_path / "final.md"
+    final_md.write_text("- [Section](#section)\n\n# Section\n", encoding="utf-8")
+
+    chunk_path = tmp_path / "chunk-0001.md"
+    chunk_path.write_text("# Heading\n\nBody\n", encoding="utf-8")
+
+    result = validate_final_output(
+        final_md,
+        source_pdf,
+        [_chunk_result(1, chunk_path)],
+        max_empty_chunks=0,
+        min_output_ratio=0.5,
+        logger=Mock(),
+    )
+
+    assert result.valid is True
+    assert any(
+        warning.startswith("Final output ratio ") and "below threshold 0.5000" in warning
+        for warning in result.warnings
+    )
+
+
 def test_validate_final_output_fails_when_empty_chunk_failures_exceed_threshold(tmp_path):
     source_pdf = tmp_path / "source.pdf"
     source_pdf.write_bytes(b"%PDF-1.4\n" + b"x" * 100)

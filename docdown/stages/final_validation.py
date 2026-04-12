@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
+import math
 from pathlib import Path
 import re
 from typing import Iterable
@@ -38,12 +39,15 @@ def validate_final_output(
     chunk_results: Iterable[ChunkResult],
     *,
     max_empty_chunks: int,
+    min_output_ratio: float = 0.01,
     logger: LogLike | None = None,
 ) -> FinalValidationResult:
     """Validate final markdown output and return aggregated findings."""
 
     if max_empty_chunks < 0:
         raise ValueError(f"max_empty_chunks must be >= 0, got {max_empty_chunks}")
+    if not math.isfinite(min_output_ratio) or min_output_ratio <= 0:
+        raise ValueError(f"min_output_ratio must be > 0 and finite, got {min_output_ratio}")
 
     active_logger = logger or get_logger()
     final_markdown = Path(final_path)
@@ -79,9 +83,9 @@ def validate_final_output(
 
     if source_size > 0:
         ratio = final_size / source_size
-        if ratio < 0.01:
+        if ratio < min_output_ratio:
             warnings.append(
-                f"Final output ratio {ratio:.4f} below threshold 0.0100"
+                f"Final output ratio {ratio:.4f} below threshold {min_output_ratio:.4f}"
             )
 
     empty_failed_chunks = _count_empty_failed_chunks(result_items)

@@ -320,6 +320,7 @@ def main(
             staged_input,
             chunk_results,
             max_empty_chunks=cfg.validation.max_empty_chunks,
+            min_output_ratio=cfg.validation.min_output_ratio,
             logger=logger,
         )
     except FinalValidationError as exc:
