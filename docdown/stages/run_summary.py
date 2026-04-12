@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 from pathlib import Path
-from typing import Iterable
 
 from docdown.stages.chunk_validation import ChunkResult
 
