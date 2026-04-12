@@ -128,13 +128,16 @@ def _has_toc_near_top(markdown_text: str, *, max_scan_lines: int = 120) -> bool:
 
 def _detect_duplicate_boundaries(chunk_results: Iterable[ChunkResult], *, logger: LogLike) -> list[str]:
     warnings: list[str] = []
-    chunk_list = list(chunk_results)
+    chunk_list = sorted(chunk_results, key=lambda chunk: chunk.chunk_number)
     boundary_cache = {
         chunk.chunk_number: _read_chunk_boundary_paragraphs(chunk.markdown_path, logger=logger)
         for chunk in chunk_list
     }
 
     for left, right in zip(chunk_list, chunk_list[1:]):
+        if right.chunk_number != left.chunk_number + 1:
+            continue
+
         left_paragraph, _ = boundary_cache[left.chunk_number]
         _, right_paragraph = boundary_cache[right.chunk_number]
         if left_paragraph is None or right_paragraph is None:

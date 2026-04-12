@@ -207,3 +207,28 @@ def test_validate_final_output_reads_each_chunk_once_for_boundary_checks(tmp_pat
     assert read_counts[chunk_1] == 1
     assert read_counts[chunk_2] == 1
     assert read_counts[chunk_3] == 1
+
+
+def test_validate_final_output_skips_duplicate_check_across_missing_chunk_numbers(tmp_path):
+    source_pdf = tmp_path / "source.pdf"
+    source_pdf.write_bytes(b"%PDF-1.4\n" + b"x" * 100)
+    final_md = tmp_path / "final.md"
+    final_md.write_text("- [Section](#section)\n\n# Section\n", encoding="utf-8")
+
+    repeated_paragraph = " ".join(["word"] * 51)
+    chunk_1 = tmp_path / "chunk-0001.md"
+    chunk_3 = tmp_path / "chunk-0003.md"
+    chunk_1.write_text(f"# H1\n\n{repeated_paragraph}\n", encoding="utf-8")
+    chunk_3.write_text(f"{repeated_paragraph}\n\n# H3\n", encoding="utf-8")
+
+    result = validate_final_output(
+        final_md,
+        source_pdf,
+        [_chunk_result(1, chunk_1), _chunk_result(3, chunk_3)],
+        max_empty_chunks=0,
+        logger=Mock(),
+    )
+
+    assert result.valid is True
+    assert result.duplicate_boundary_count == 0
+    assert not any("Potential duplicate boundary paragraph" in warning for warning in result.warnings)
