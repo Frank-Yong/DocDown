@@ -363,7 +363,7 @@ def main(
     except OSError:
         output_size_bytes = 0
 
-    tables_found = len(list(work_dir.tables_dir.glob("chunk-*-table-*.md")))
+    tables_found = sum(1 for _ in work_dir.tables_dir.glob("chunk-*-table-*.md"))
     total_warning_count = warning_count + len(final_validation.warnings)
     summary_context = RunSummaryContext(
         input_path=staged_input,
