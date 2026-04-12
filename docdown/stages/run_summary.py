@@ -64,7 +64,7 @@ def append_run_summary(run_log_path: Path, summary: str) -> None:
 
     target = Path(run_log_path)
     try:
-        with target.open("a", encoding="utf-8", newline="") as handle:
+        with target.open("a", encoding="utf-8") as handle:
             if not summary.endswith("\n"):
                 summary = f"{summary}\n"
             handle.write("\n")
