@@ -232,3 +232,34 @@ def test_validate_final_output_skips_duplicate_check_across_missing_chunk_number
     assert result.valid is True
     assert result.duplicate_boundary_count == 0
     assert not any("Potential duplicate boundary paragraph" in warning for warning in result.warnings)
+
+
+def test_validate_final_output_ignores_matching_interior_paragraphs_when_boundaries_are_short(tmp_path):
+    source_pdf = tmp_path / "source.pdf"
+    source_pdf.write_bytes(b"%PDF-1.4\n" + b"x" * 100)
+    final_md = tmp_path / "final.md"
+    final_md.write_text("- [Section](#section)\n\n# Section\n", encoding="utf-8")
+
+    repeated_interior = " ".join(["word"] * 51)
+    chunk_1 = tmp_path / "chunk-0001.md"
+    chunk_2 = tmp_path / "chunk-0002.md"
+    chunk_1.write_text(
+        "# H1\n\nshort start\n\n" + repeated_interior + "\n\nshort end\n",
+        encoding="utf-8",
+    )
+    chunk_2.write_text(
+        "short start\n\n" + repeated_interior + "\n\n# H2\n\nshort end\n",
+        encoding="utf-8",
+    )
+
+    result = validate_final_output(
+        final_md,
+        source_pdf,
+        [_chunk_result(1, chunk_1), _chunk_result(2, chunk_2)],
+        max_empty_chunks=0,
+        logger=Mock(),
+    )
+
+    assert result.valid is True
+    assert result.duplicate_boundary_count == 0
+    assert not any("Potential duplicate boundary paragraph" in warning for warning in result.warnings)

@@ -165,11 +165,17 @@ def _read_chunk_boundary_paragraphs(markdown_path: Path | None, *, logger: LogLi
         return None, None
 
     paragraphs = [_normalize_paragraph(part) for part in re.split(r"\n\s*\n", text)]
-    candidates = [paragraph for paragraph in paragraphs if _word_count(paragraph) > 50]
-    if not candidates:
+    non_empty_paragraphs = [paragraph for paragraph in paragraphs if paragraph]
+    if not non_empty_paragraphs:
         return None, None
 
-    return candidates[-1], candidates[0]
+    first_paragraph = non_empty_paragraphs[0]
+    last_paragraph = non_empty_paragraphs[-1]
+
+    first_boundary = first_paragraph if _word_count(first_paragraph) > 50 else None
+    last_boundary = last_paragraph if _word_count(last_paragraph) > 50 else None
+
+    return last_boundary, first_boundary
 
 
 def _normalize_paragraph(text: str) -> str:
