@@ -1,0 +1,113 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: docdown-cd-main
+  cancel-in-progress: false
+
+env:
+  DOCDOWN_DEPLOY_ROOT: /opt/docdown
+  DOCDOWN_RELEASES_DIR: /opt/docdown/releases
+  DOCDOWN_CURRENT_LINK: /opt/docdown/current
+  DOCDOWN_SHARED_DIR: /opt/docdown/shared
+  DOCDOWN_WORKSPACE_DIR: /opt/docdown/workspace
+
+jobs:
+  deploy:
+    name: Deploy to local runner
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+      - docdown
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare release, activate, and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_id="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          release_dir="${DOCDOWN_RELEASES_DIR}/${release_id}"
+          previous_release=""
+
+          if [ -L "${DOCDOWN_CURRENT_LINK}" ]; then
+            previous_release="$(readlink -f "${DOCDOWN_CURRENT_LINK}")"
+          fi
+
+          echo "PREVIOUS_RELEASE=${previous_release}" >> "${GITHUB_ENV}"
+
+          mkdir -p "${DOCDOWN_RELEASES_DIR}" "${DOCDOWN_SHARED_DIR}" "${DOCDOWN_WORKSPACE_DIR}"
+          rm -rf "${DOCDOWN_WORKSPACE_DIR}/repo"
+          cp -a "${GITHUB_WORKSPACE}" "${DOCDOWN_WORKSPACE_DIR}/repo"
+          rm -rf "${DOCDOWN_WORKSPACE_DIR}/repo/.git"
+
+          mkdir -p "${release_dir}"
+          cp -a "${DOCDOWN_WORKSPACE_DIR}/repo/." "${release_dir}/"
+
+          python3 -m venv "${release_dir}/.venv"
+          "${release_dir}/.venv/bin/pip" install --upgrade pip
+          "${release_dir}/.venv/bin/pip" install "${release_dir}"
+
+          sudo /usr/local/bin/docdown-activate-release "${release_dir}"
+          sudo systemctl restart docdown-worker
+          sudo systemctl restart docdown-api
+
+          smoke_output_dir="${DOCDOWN_SHARED_DIR}/smoke/output"
+          smoke_log="${DOCDOWN_SHARED_DIR}/smoke/run.log"
+
+          rm -rf "${smoke_output_dir}"
+          mkdir -p "${smoke_output_dir}"
+          "${DOCDOWN_CURRENT_LINK}/.venv/bin/docdown" \
+            "${DOCDOWN_SHARED_DIR}/smoke/input.pdf" \
+            -o "${smoke_output_dir}" \
+            --log-level INFO \
+            2> >(tee -a "${smoke_log}" >&2)
+
+          test -s "${smoke_output_dir}/final.md"
+          grep -q "Run Summary" "${smoke_log}"
+
+          if [ -n "${previous_release}" ] && [ -d "${previous_release}" ]; then
+            ls -1dt "${DOCDOWN_RELEASES_DIR}"/* | tail -n +6 | xargs -r rm -rf
+          fi
+
+      - name: Roll back on failure
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -n "${PREVIOUS_RELEASE:-}" ] && [ -d "${PREVIOUS_RELEASE}" ]; then
+            sudo /usr/local/bin/docdown-activate-release "${PREVIOUS_RELEASE}"
+            sudo systemctl restart docdown-worker
+            sudo systemctl restart docdown-api
+          fi
+
+      - name: Deployment prerequisites
+        if: always()
+        run: |
+          cat <<'EOF'
+          Runner prerequisites:
+          - labels: self-hosted, linux, x64, docdown
+          - user: docdown-runner
+          - writable paths: /opt/docdown, /opt/docdown/releases, /opt/docdown/shared, /opt/docdown/workspace
+          - privileged commands:
+            * /usr/local/bin/docdown-activate-release <release-path>
+            * systemctl restart docdown-worker
+            * systemctl restart docdown-api
+
+          Secrets:
+          - No mandatory repository secret for v1 local self-hosted deployment.
+          - Optional future secrets for remote orchestration:
+            * DOCDOWN_DEPLOY_HOST
+            * DOCDOWN_DEPLOY_SSH_KEY
+          EOF
