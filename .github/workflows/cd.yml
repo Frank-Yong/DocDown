@@ -69,7 +69,15 @@ jobs:
 
           python3 -m venv "${release_dir}/.venv"
           "${release_dir}/.venv/bin/pip" install --upgrade pip
-          "${release_dir}/.venv/bin/pip" install "${release_dir}"
+
+          wheelhouse_dir="${DOCDOWN_SHARED_DIR}/wheelhouse"
+          if [ -d "${wheelhouse_dir}" ] && find "${wheelhouse_dir}" -maxdepth 1 -type f \( -name '*.whl' -o -name '*.tar.gz' \) | grep -q .; then
+            echo "Installing from local wheelhouse: ${wheelhouse_dir}"
+            "${release_dir}/.venv/bin/pip" install --no-index --find-links "${wheelhouse_dir}" "${release_dir}"
+          else
+            echo "Warning: wheelhouse not found/empty at ${wheelhouse_dir}; installing from package index." >&2
+            "${release_dir}/.venv/bin/pip" install "${release_dir}"
+          fi
 
           sudo /usr/local/bin/docdown-activate-release "${release_dir}"
           sudo /usr/bin/systemctl restart docdown-worker
@@ -154,6 +162,7 @@ jobs:
           - user: docdown-runner
           - python: python3 must resolve to >= 3.10 with venv support (python3-venv)
           - system tools: qpdf, pandoc, ghostscript
+          - optional for reproducible/offline deploys: populate /opt/docdown/shared/wheelhouse with dependency wheels
           - writable paths: /opt/docdown, /opt/docdown/releases, /opt/docdown/shared, /opt/docdown/workspace
           - privileged commands:
             * /usr/local/bin/docdown-activate-release <release-path>
