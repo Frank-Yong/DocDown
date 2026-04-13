@@ -1,0 +1,68 @@
+# Task 10.1 - CI/CD Pipeline And Deployment Workflow
+
+## Summary
+
+Create the initial automation for repository validation and deployment using the selected operating model:
+
+- Pull request = CI
+- Merge to main = CD
+- CD runs on a local hosted GitHub Actions runner
+
+This task covers repository automation and deployment mechanics. Document-conversion runtime orchestration (job intake, queueing, worker lifecycle, artifact retention) is tracked in Task 10.2.
+
+## Dependencies
+
+- Task 8.3 (run summary generation)
+- Operational end-to-end converter available on main
+
+## Acceptance Criteria
+
+- [ ] A CI workflow exists under `.github/workflows/ci.yml`.
+- [ ] CI runs on pull requests and executes repository validation checks (tests as baseline).
+- [ ] CI uses a GitHub-hosted Ubuntu runner and includes required system dependencies for DocDown checks.
+- [ ] A CD workflow exists under `.github/workflows/cd.yml`.
+- [ ] CD triggers on push to `main` (merge path).
+- [ ] CD runs on a local hosted GitHub runner.
+- [ ] CD performs a deploy step using a documented, repeatable command path.
+- [ ] A rollback strategy is documented (retain previous release and restore command/path).
+- [ ] Workflow docs describe required repository/environment secrets and runner prerequisites.
+
+## Implementation Notes
+
+### Scope
+
+This task defines the first production-ready CI/CD baseline for DocDown. It is intentionally minimal and should prioritize deterministic execution over broad feature coverage.
+
+### CI Baseline
+
+- Trigger: `pull_request`
+- Runner: `ubuntu-latest`
+- Steps:
+  - checkout
+  - Python setup
+  - system dependency install (`qpdf`, `pandoc`, `ghostscript`)
+  - install project dependencies
+  - run automated tests
+
+### CD Baseline
+
+- Trigger: push to `main`
+- Runner: `local hosted GitHub runner` (`self-hosted` label)
+- High-level flow:
+  - fetch/pull deployable revision
+  - install/update runtime dependencies if required
+  - perform atomic release switch (or equivalent safe replace)
+  - restart service/worker process
+  - retain previous release for rollback
+
+### Operational Notes
+
+- Keep deployment idempotent.
+- Keep production secrets out of repository files.
+- Keep rollback simple and tested.
+
+## References
+
+- [../notes/2026-04-07_20-53-00.md](../notes/2026-04-07_20-53-00.md)
+- [../spec.md](../spec.md)
+- [../technical-design.md](../technical-design.md)
