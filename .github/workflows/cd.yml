@@ -56,6 +56,13 @@ jobs:
           mkdir "${release_dir}"
           cp -a "${DOCDOWN_WORKSPACE_DIR}/repo/." "${release_dir}/"
 
+          if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'
+          then
+            echo "python3 must be >= 3.10 for DocDown deploy. Install Python 3.10+ on the runner host." >&2
+            python3 --version >&2 || true
+            exit 1
+          fi
+
           python3 -m venv "${release_dir}/.venv"
           "${release_dir}/.venv/bin/pip" install --upgrade pip
           "${release_dir}/.venv/bin/pip" install "${release_dir}"
