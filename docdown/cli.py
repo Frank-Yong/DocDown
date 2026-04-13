@@ -1,6 +1,7 @@
 """CLI entry point for DocDown."""
 
 from pathlib import Path
+from time import perf_counter
 
 import click
 
@@ -11,6 +12,12 @@ from docdown.stages.convert import PandocError, convert_to_markdown, ensure_pand
 from docdown.stages.extract import ExtractorUsed, orchestrate_extraction
 from docdown.stages.final_validation import FinalValidationError, validate_final_output
 from docdown.stages.merge import MergeError, merge_chunks
+from docdown.stages.run_summary import (
+    RunSummaryContext,
+    RunSummaryError,
+    append_run_summary,
+    generate_run_summary,
+)
 from docdown.stages.split import PdfSplitError, PdfValidationError, split_pdf, validate_pdf
 from docdown.stages.toc import TocError, generate_toc, log_heading_diagnostics
 from docdown.utils.logging import configure_logging
@@ -85,6 +92,8 @@ def main(
     max_empty_chunks,
 ):
     """Convert a PDF to Markdown."""
+
+    run_start = perf_counter()
 
     cli_overrides = {
         "input": input_pdf,
@@ -166,6 +175,18 @@ def main(
         grobid_url=cfg.grobid_url,
         logger=logger,
     )
+
+    extraction_failure_results = [
+        ChunkResult(
+            chunk_number=result.chunk_number,
+            success=False,
+            markdown_path=None,
+            error=getattr(result, "error", None),
+            validation=None,
+        )
+        for result in extraction_results
+        if not result.success
+    ]
 
     successful_extractions = [
         result for result in extraction_results if result.success and result.output_path is not None
@@ -278,11 +299,11 @@ def main(
             raise click.ClickException("All extracted chunks failed validation.")
         raise click.ClickException("Markdown conversion/cleanup failed for all extracted chunks.")
 
-    failed_chunks = [item for item in chunk_results if not item.success]
+    failed_chunks = [*extraction_failure_results, *(item for item in chunk_results if not item.success)]
 
     warning_count = sum(len(item.validation.warnings) for item in chunk_results if item.validation is not None)
     logger.info(
-        "Conversion summary: %s converted, %s extraction successes skipped/failed, %s chunk validation warnings",
+        "Conversion summary: %s converted, %s chunks failed across extraction/conversion/validation, %s chunk validation warnings",
         converted_chunks,
         len(failed_chunks),
         warning_count,
@@ -318,7 +339,7 @@ def main(
         final_validation = validate_final_output(
             work_dir.final_markdown(),
             staged_input,
-            chunk_results,
+            [*extraction_failure_results, *chunk_results],
             max_empty_chunks=cfg.validation.max_empty_chunks,
             min_output_ratio=cfg.validation.min_output_ratio,
             logger=logger,
@@ -336,6 +357,33 @@ def main(
         final_validation.duplicate_boundary_count,
         final_validation.failed_chunk_count,
     )
+
+    try:
+        output_size_bytes = work_dir.final_markdown().stat().st_size
+    except OSError:
+        output_size_bytes = 0
+
+    tables_found = sum(1 for _ in work_dir.tables_dir.glob("chunk-*-table-*.md"))
+    total_warning_count = warning_count + len(final_validation.warnings)
+    summary_context = RunSummaryContext(
+        input_path=staged_input,
+        input_size_bytes=validation.file_size_bytes,
+        total_pages=validation.page_count,
+        total_chunks=split_result.chunk_count,
+        successful_chunks=converted_chunks,
+        failed_chunks=tuple(failed_chunks),
+        tables_found=tables_found,
+        output_path=work_dir.final_markdown(),
+        output_size_bytes=output_size_bytes,
+        duration_seconds=perf_counter() - run_start,
+        warning_count=total_warning_count,
+    )
+    summary_text = generate_run_summary(summary_context)
+    click.echo(summary_text, err=True)
+    try:
+        append_run_summary(cfg.workdir / "run.log", summary_text)
+    except RunSummaryError as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 def _version():
