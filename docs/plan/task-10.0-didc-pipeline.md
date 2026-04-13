@@ -55,14 +55,18 @@ This task establishes the decision baseline that Task 10.1 (CI/CD pipeline) and 
   - service account (both nodes): `docdown-runner`
   - required permissions:
     - read/write under deployment root (`/opt/docdown`)
-    - switch release symlink (`/opt/docdown/current`)
+    - execute a scoped release-activation wrapper that switches `/opt/docdown/current`
     - restart DocDown services via `systemctl` (worker/api)
     - no unrestricted root shell access
   - provisioning baseline (run as root on each node):
     - `useradd --create-home --shell /bin/bash docdown-runner`
     - `install -d -o docdown-runner -g docdown-runner /opt/docdown`
+    - install root-owned wrapper `/usr/local/bin/docdown-activate-release` that:
+      - accepts exactly one release path argument
+      - verifies path is under `/opt/docdown/releases/`
+      - runs `ln -sfn <validated-release> /opt/docdown/current`
     - create `/etc/sudoers.d/docdown-runner` with:
-      - `docdown-runner ALL=(root) NOPASSWD: /usr/bin/ln, /usr/bin/systemctl restart docdown-worker, /usr/bin/systemctl restart docdown-api`
+      - `docdown-runner ALL=(root) NOPASSWD: /usr/local/bin/docdown-activate-release, /usr/bin/systemctl restart docdown-worker, /usr/bin/systemctl restart docdown-api`
     - `chmod 440 /etc/sudoers.d/docdown-runner`
     - `visudo -cf /etc/sudoers.d/docdown-runner`
   - deployment working directory and release paths (v1):
@@ -95,7 +99,7 @@ This task establishes the decision baseline that Task 10.1 (CI/CD pipeline) and 
     - App owners own runtime config values in shared config
 6. Recovery and verification:
   - rollback command/path (v1):
-    - relink active release: `sudo ln -sfn /opt/docdown/releases/<previous-release> /opt/docdown/current`
+    - relink active release: `sudo /usr/local/bin/docdown-activate-release /opt/docdown/releases/<previous-release>`
     - restart worker: `sudo systemctl restart docdown-worker`
     - restart API: `sudo systemctl restart docdown-api`
   - post-deploy smoke conversion command (v1):
