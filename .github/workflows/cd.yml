@@ -79,26 +79,33 @@ jobs:
           test -s "${smoke_output_dir}/final.md"
           grep -q "Run Summary" "${smoke_log}"
 
-          if [ -n "${previous_release}" ] && [ -d "${previous_release}" ]; then
-            # Keep the 5 newest release directories; remove older ones safely.
-            find "${DOCDOWN_RELEASES_DIR}" \
-              -mindepth 1 \
-              -maxdepth 1 \
-              -type d \
-              -printf '%T@\t%p\0' | sort -z -n -r |
-              {
-                keep=0
-                while IFS= read -r -d '' entry; do
-                  keep=$((keep + 1))
-                  if [ "${keep}" -le 5 ]; then
-                    continue
-                  fi
-
-                  release_path="${entry#*$'\t'}"
-                  rm -rf -- "${release_path}"
-                done
-              }
+          current_release=""
+          if [ -L "${DOCDOWN_CURRENT_LINK}" ]; then
+            current_release="$(readlink -f "${DOCDOWN_CURRENT_LINK}" || true)"
           fi
+
+          # Keep the 5 newest release directories; remove older ones safely.
+          find "${DOCDOWN_RELEASES_DIR}" \
+            -mindepth 1 \
+            -maxdepth 1 \
+            -type d \
+            -printf '%T@\t%p\0' | sort -z -n -r |
+            {
+              keep=0
+              while IFS= read -r -d '' entry; do
+                keep=$((keep + 1))
+                if [ "${keep}" -le 5 ]; then
+                  continue
+                fi
+
+                release_path="${entry#*$'\t'}"
+                if [ -n "${current_release}" ] && [ "${release_path}" = "${current_release}" ]; then
+                  continue
+                fi
+
+                rm -rf -- "${release_path}"
+              done
+            }
 
       - name: Roll back on failure
         if: failure()
