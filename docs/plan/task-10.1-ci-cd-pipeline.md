@@ -62,6 +62,6 @@ This task defines the first production-ready CI/CD baseline for DocDown. It is i
 
 ## References
 
-- [task-10.0-didc-pipeline.md](task-10.0-didc-pipeline.md)
+- [task-10.0-ci-cd-prerequisites.md](task-10.0-ci-cd-prerequisites.md)
 - [../spec.md](../spec.md)
 - [../technical-design.md](../technical-design.md)
