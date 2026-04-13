@@ -83,6 +83,7 @@ jobs:
           mkdir -p "${smoke_output_dir}"
           "${DOCDOWN_CURRENT_LINK}/.venv/bin/docdown" \
             "${DOCDOWN_SHARED_DIR}/smoke/input.pdf" \
+            --config "${DOCDOWN_CURRENT_LINK}/docdown.yaml" \
             -o "${smoke_output_dir}" \
             --log-level INFO \
             2> >(tee "${smoke_stderr_log}" >&2)
