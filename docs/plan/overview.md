@@ -2,7 +2,7 @@
 
 ## Overview
 
-This plan breaks the DocDown pipeline implementation into 9 stages with individual tasks. Each task has its own file with detailed acceptance criteria, dependencies, and implementation notes.
+This plan breaks the DocDown pipeline implementation into 10 stages with individual tasks. Each task has its own file with detailed acceptance criteria, dependencies, and implementation notes.
 
 Stages are ordered by dependency — later stages build on earlier ones. Within a stage, tasks can often be worked in parallel.
 
@@ -99,6 +99,16 @@ Alternative pipeline using LLM for higher-quality output.
 | [9.2](task-9.2-llm-integration.md) | LLM integration & prompt design | 9.1, 1.2 |
 | [9.3](task-9.3-llm-chunking.md) | Context-window chunking & de-duplication | 9.2 |
 
+### Stage 10 — CI/CD & Deployment
+
+Define and automate validation and deployment workflows.
+
+| Task | Title | Dependencies |
+| ---- | ----- | ------------ |
+| [10.0](task-10.0-ci-cd-prerequisites.md) | CI/CD and conversion workflow prerequisites | 8.3 |
+| [10.1](task-10.1-ci-cd-pipeline.md) | CI/CD pipeline and deployment workflow | 10.0 |
+| [10.2](task-10.2-conversion-workflow.md) | Conversion workflow orchestration and operations model | 10.1 |
+
 ---
 
 ## Dependency Graph
@@ -118,7 +128,9 @@ Stage 1 (Setup)
   │                                         │
   │    Stage 8 (Validation) ◀───────────────┘
   │
-  └──▶ Stage 9 (LLM — optional, independent path)
+  ├──▶ Stage 9 (LLM — optional, independent path)
+  │
+  └──▶ Stage 10 (CI/CD & deployment)
 ```
 
 ## Alternative Delivery Paths
@@ -129,7 +141,7 @@ Stage 1 (Setup)
 ## Execution Decision
 
 - Selected path: [fast-path-01.md](fast-path-01.md) (Quality-First MVP).
-- Current task focus: [task-1.2-configuration.md](task-1.2-configuration.md).
+- Current task focus: [task-10.0-ci-cd-prerequisites.md](task-10.0-ci-cd-prerequisites.md).
 
 ## Conventions
 

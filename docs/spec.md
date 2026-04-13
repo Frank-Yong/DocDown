@@ -25,7 +25,7 @@ DocDown is a pipeline for converting large PDF documents (300+ MB) into clean, s
 | Environment       | Priority  | Purpose                          |
 | ----------------- | --------- | -------------------------------- |
 | Linux (local)     | Primary   | Development and production use   |
-| GitHub Actions    | Primary   | CI/CD — automated runs on push   |
+| GitHub Actions    | Primary   | PR CI and merge-to-main CD       |
 | Windows (local)   | Secondary | Debugging and development        |
 
 ### 4.2 Runtime Requirements
@@ -40,7 +40,8 @@ DocDown is a pipeline for converting large PDF documents (300+ MB) into clean, s
 - Shell commands (`qpdf`, `pandoc`, `pdftk`) are invoked via `subprocess`, not shell scripts.
 - File merging and concatenation are implemented in Python, not via `cat` or other shell utilities.
 - GROBID is accessed over HTTP — platform-agnostic.
-- CI environment assumes `ubuntu-latest` GitHub Actions runner with Docker support.
+- CI runs on pull requests using GitHub-hosted `ubuntu-latest` runners with Docker support.
+- CD runs on merge to `main` using a local self-hosted GitHub Actions runner.
 
 ## 5. Architecture
 

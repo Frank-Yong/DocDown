@@ -459,7 +459,7 @@ Memory usage is bounded by the chunk size. A 50-page chunk typically requires < 
 | Environment       | Priority  | Notes                                                        |
 | ----------------- | --------- | ------------------------------------------------------------ |
 | Linux (local)     | Primary   | Ubuntu 22.04+ recommended. All tools available via apt/pip.  |
-| GitHub Actions    | Primary   | `ubuntu-latest` runner. GROBID via Docker service container. |
+| GitHub Actions    | Primary   | PR CI on `ubuntu-latest`; merge-to-main CD on local self-hosted runner. |
 | Windows (local)   | Secondary | For debugging. Requires Docker Desktop or WSL2 for GROBID.   |
 
 ### 11.2 Python Version
@@ -475,14 +475,15 @@ Python 3.10+ (for `match` statements, `|` union types in type hints, and `pathli
 5. **Docker:** GROBID is accessed over HTTP (`localhost:8070`). Docker availability is checked at startup; if unavailable, the pipeline falls back to pdfminer for all chunks.
 6. **Temp files:** Use `tempfile` module or the working directory — never hardcode `/tmp`.
 
-### 11.4 GitHub Actions CI
+### 11.4 GitHub Actions CI/CD
 
 Minimal workflow structure:
 
 ```yaml
 # .github/workflows/ci.yml
 name: CI
-on: [push, pull_request]
+on:
+  pull_request:
 
 jobs:
   test:
@@ -503,6 +504,20 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Run tests
         run: pytest
+```
+
+CD workflow trigger and runner policy:
+
+```yaml
+# .github/workflows/cd.yml
+name: CD
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, linux, x64, docdown]
 ```
 
 ### 11.5 Windows Development Notes
