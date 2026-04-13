@@ -115,6 +115,6 @@ This task establishes the decision baseline that Task 10.1 (CI/CD pipeline) and 
 
 ## References
 
-- [../notes/2026-04-07_20-53-00.md](../notes/2026-04-07_20-53-00.md)
+- [../technical-design.md](../technical-design.md)
 - [task-10.1-ci-cd-pipeline.md](task-10.1-ci-cd-pipeline.md)
 - [task-10.2-conversion-workflow.md](task-10.2-conversion-workflow.md)
