@@ -147,6 +147,8 @@ jobs:
           Runner prerequisites:
           - labels: self-hosted, linux, x64, docdown
           - user: docdown-runner
+          - python: python3 must resolve to >= 3.10 with venv support (python3-venv)
+          - system tools: qpdf, pandoc, ghostscript
           - writable paths: /opt/docdown, /opt/docdown/releases, /opt/docdown/shared, /opt/docdown/workspace
           - privileged commands:
             * /usr/local/bin/docdown-activate-release <release-path>
