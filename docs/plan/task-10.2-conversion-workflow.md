@@ -50,6 +50,6 @@ The goal is to make conversion execution operationally safe in production. CI/CD
 
 ## References
 
-- [../notes/2026-04-07_20-53-00.md](../notes/2026-04-07_20-53-00.md)
+- [task-10.0-didc-pipeline.md](task-10.0-didc-pipeline.md)
 - [task-10.1-ci-cd-pipeline.md](task-10.1-ci-cd-pipeline.md)
 - [../technical-design.md](../technical-design.md)
