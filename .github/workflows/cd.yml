@@ -10,7 +10,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  DOCDOWN_DEPLOY_ROOT: /opt/docdown
   DOCDOWN_RELEASES_DIR: /opt/docdown/releases
   DOCDOWN_CURRENT_LINK: /opt/docdown/current
   DOCDOWN_SHARED_DIR: /opt/docdown/shared
