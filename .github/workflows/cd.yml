@@ -77,7 +77,24 @@ jobs:
           grep -q "Run Summary" "${smoke_log}"
 
           if [ -n "${previous_release}" ] && [ -d "${previous_release}" ]; then
-            ls -1dt "${DOCDOWN_RELEASES_DIR}"/* | tail -n +6 | xargs -r rm -rf
+            # Keep the 5 newest release directories; remove older ones safely.
+            find "${DOCDOWN_RELEASES_DIR}" \
+              -mindepth 1 \
+              -maxdepth 1 \
+              -type d \
+              -printf '%T@\t%p\0' | sort -z -n -r |
+              {
+                keep=0
+                while IFS= read -r -d '' entry; do
+                  keep=$((keep + 1))
+                  if [ "${keep}" -le 5 ]; then
+                    continue
+                  fi
+
+                  release_path="${entry#*$'\t'}"
+                  rm -rf -- "${release_path}"
+                done
+              }
           fi
 
       - name: Roll back on failure
