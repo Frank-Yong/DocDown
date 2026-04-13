@@ -63,7 +63,7 @@ jobs:
           sudo /usr/bin/systemctl restart docdown-api
 
           smoke_output_dir="${DOCDOWN_SHARED_DIR}/smoke/output"
-          smoke_log="${DOCDOWN_SHARED_DIR}/smoke/run.log"
+          smoke_log="${smoke_output_dir}/run.log"
 
           rm -rf "${smoke_output_dir}"
           mkdir -p "${smoke_output_dir}"
@@ -71,7 +71,7 @@ jobs:
             "${DOCDOWN_SHARED_DIR}/smoke/input.pdf" \
             -o "${smoke_output_dir}" \
             --log-level INFO \
-            2> >(tee -a "${smoke_log}" >&2)
+            2> >(tee "${smoke_log}" >&2)
 
           test -s "${smoke_output_dir}/final.md"
           grep -q "Run Summary" "${smoke_log}"
