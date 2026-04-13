@@ -96,7 +96,8 @@ This task establishes the decision baseline that Task 10.1 (CI/CD pipeline) and 
 6. Recovery and verification:
   - rollback command/path (v1):
     - relink active release: `sudo ln -sfn /opt/docdown/releases/<previous-release> /opt/docdown/current`
-    - restart services: `sudo systemctl restart docdown-worker docdown-api`
+    - restart worker: `sudo systemctl restart docdown-worker`
+    - restart API: `sudo systemctl restart docdown-api`
   - post-deploy smoke conversion command (v1):
     - `/opt/docdown/current/.venv/bin/docdown /opt/docdown/shared/smoke/input.pdf -o /opt/docdown/shared/smoke/output --log-level INFO`
   - smoke success criteria:
