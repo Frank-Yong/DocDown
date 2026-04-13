@@ -105,7 +105,8 @@ Define and automate validation and deployment workflows.
 
 | Task | Title | Dependencies |
 | ---- | ----- | ------------ |
-| [10.1](task-10.1-ci-cd-pipeline.md) | CI/CD pipeline and deployment workflow | 8.3 |
+| [10.0](task-10.0-didc-pipeline.md) | CI/CD and conversion workflow prerequisites | 8.3 |
+| [10.1](task-10.1-ci-cd-pipeline.md) | CI/CD pipeline and deployment workflow | 10.0 |
 | [10.2](task-10.2-conversion-workflow.md) | Conversion workflow orchestration and operations model | 10.1 |
 
 ---
@@ -140,7 +141,7 @@ Stage 1 (Setup)
 ## Execution Decision
 
 - Selected path: [fast-path-01.md](fast-path-01.md) (Quality-First MVP).
-- Current task focus: [task-10.2-conversion-workflow.md](task-10.2-conversion-workflow.md).
+- Current task focus: [task-10.0-didc-pipeline.md](task-10.0-didc-pipeline.md).
 
 ## Conventions
 

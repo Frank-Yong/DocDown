@@ -12,8 +12,7 @@ This task covers repository automation and deployment mechanics. Document-conver
 
 ## Dependencies
 
-- Task 8.3 (run summary generation)
-- Operational end-to-end converter available on main
+- Task 10.0 (CI/CD and conversion workflow prerequisites)
 
 ## Acceptance Criteria
 
