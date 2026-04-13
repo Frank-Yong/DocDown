@@ -107,9 +107,20 @@ jobs:
           set -euo pipefail
 
           if [ -n "${PREVIOUS_RELEASE:-}" ] && [ -d "${PREVIOUS_RELEASE}" ]; then
+            echo "Rollback: restoring previous release ${PREVIOUS_RELEASE}"
             sudo /usr/local/bin/docdown-activate-release "${PREVIOUS_RELEASE}"
             sudo /usr/bin/systemctl restart docdown-worker
             sudo /usr/bin/systemctl restart docdown-api
+            if [ -L "${DOCDOWN_CURRENT_LINK}" ]; then
+              echo "Rollback complete. Current link target: $(readlink -f "${DOCDOWN_CURRENT_LINK}" || true)"
+            fi
+          else
+            echo "Rollback skipped: PREVIOUS_RELEASE is empty or does not exist (${PREVIOUS_RELEASE:-<empty>})."
+            if [ -L "${DOCDOWN_CURRENT_LINK}" ]; then
+              echo "Current link target: $(readlink -f "${DOCDOWN_CURRENT_LINK}" || true)"
+            else
+              echo "Current link is not a symlink: ${DOCDOWN_CURRENT_LINK}"
+            fi
           fi
 
       - name: Deployment prerequisites
