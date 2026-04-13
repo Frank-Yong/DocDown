@@ -36,7 +36,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          release_id="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          release_id="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           release_dir="${DOCDOWN_RELEASES_DIR}/${release_id}"
           previous_release=""
 
@@ -51,7 +51,12 @@ jobs:
           cp -a "${GITHUB_WORKSPACE}" "${DOCDOWN_WORKSPACE_DIR}/repo"
           rm -rf "${DOCDOWN_WORKSPACE_DIR}/repo/.git"
 
-          mkdir -p "${release_dir}"
+          if [ -e "${release_dir}" ]; then
+            echo "Release directory already exists: ${release_dir}" >&2
+            exit 1
+          fi
+
+          mkdir "${release_dir}"
           cp -a "${DOCDOWN_WORKSPACE_DIR}/repo/." "${release_dir}/"
 
           python3 -m venv "${release_dir}/.venv"
