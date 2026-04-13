@@ -40,7 +40,7 @@ jobs:
           previous_release=""
 
           if [ -L "${DOCDOWN_CURRENT_LINK}" ]; then
-            previous_release="$(readlink -f "${DOCDOWN_CURRENT_LINK}")"
+            previous_release="$(readlink -f "${DOCDOWN_CURRENT_LINK}" || true)"
           fi
 
           echo "PREVIOUS_RELEASE=${previous_release}" >> "${GITHUB_ENV}"
