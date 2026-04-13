@@ -95,7 +95,7 @@ jobs:
           fi
 
           # Keep the 5 newest release directories; remove older ones safely.
-          find "${DOCDOWN_RELEASES_DIR}" \
+          if ! find "${DOCDOWN_RELEASES_DIR}" \
             -mindepth 1 \
             -maxdepth 1 \
             -type d \
@@ -116,6 +116,9 @@ jobs:
                 rm -rf -- "${release_path}"
               done
             }
+          then
+            echo "Warning: release retention cleanup failed; continuing deployment." >&2
+          fi
 
       - name: Roll back on failure
         if: failure()
