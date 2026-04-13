@@ -64,6 +64,7 @@ jobs:
 
           smoke_output_dir="${DOCDOWN_SHARED_DIR}/smoke/output"
           smoke_log="${smoke_output_dir}/run.log"
+          smoke_stderr_log="${smoke_output_dir}/stderr.log"
 
           rm -rf "${smoke_output_dir}"
           mkdir -p "${smoke_output_dir}"
@@ -71,7 +72,7 @@ jobs:
             "${DOCDOWN_SHARED_DIR}/smoke/input.pdf" \
             -o "${smoke_output_dir}" \
             --log-level INFO \
-            2> >(tee "${smoke_log}" >&2)
+            2> >(tee "${smoke_stderr_log}" >&2)
 
           test -s "${smoke_output_dir}/final.md"
           grep -q "Run Summary" "${smoke_log}"
