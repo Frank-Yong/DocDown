@@ -2,8 +2,9 @@
 
 ## Execution Status
 
-- Selected for implementation.
-- Current active task: [task-1.2-configuration.md](task-1.2-configuration.md).
+- Completed.
+- Outcome: operational end-to-end deterministic converter.
+- Delivery model selected: PR = CI, merge to `main` = CD on local self-hosted GitHub runner.
 
 ## Motivation
 
