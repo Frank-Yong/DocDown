@@ -517,7 +517,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, x64, docdown]
 ```
 
 ### 11.5 Windows Development Notes
