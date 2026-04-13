@@ -21,6 +21,7 @@ env:
 jobs:
   deploy:
     name: Deploy to local runner
+    timeout-minutes: 30
     runs-on:
       - self-hosted
       - linux
