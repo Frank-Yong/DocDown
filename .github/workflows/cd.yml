@@ -67,6 +67,18 @@ jobs:
             exit 1
           fi
 
+          missing_tools=""
+          for tool in qpdf pandoc gs; do
+            if ! command -v "${tool}" >/dev/null 2>&1; then
+              missing_tools="${missing_tools} ${tool}"
+            fi
+          done
+          if [ -n "${missing_tools}" ]; then
+            echo "Missing required system tools:${missing_tools}" >&2
+            echo "Install qpdf, pandoc, and ghostscript on the runner host before running CD." >&2
+            exit 1
+          fi
+
           python3 -m venv "${release_dir}/.venv"
           "${release_dir}/.venv/bin/pip" install --upgrade pip
 
