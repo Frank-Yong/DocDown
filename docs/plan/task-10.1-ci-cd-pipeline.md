@@ -16,15 +16,15 @@ This task covers repository automation and deployment mechanics. Document-conver
 
 ## Acceptance Criteria
 
-- [ ] A CI workflow exists under `.github/workflows/ci.yml`.
-- [ ] CI runs on pull requests and executes repository validation checks (tests as baseline).
-- [ ] CI uses a GitHub-hosted Ubuntu runner and includes required system dependencies for DocDown checks.
-- [ ] A CD workflow exists under `.github/workflows/cd.yml`.
-- [ ] CD triggers on push to `main` (merge path).
-- [ ] CD runs on a local hosted GitHub runner.
-- [ ] CD performs a deploy step using a documented, repeatable command path.
-- [ ] A rollback strategy is documented (retain previous release and restore command/path).
-- [ ] Workflow docs describe required repository/environment secrets and runner prerequisites.
+- [x] A CI workflow exists under `.github/workflows/ci.yml`.
+- [x] CI runs on pull requests and executes repository validation checks (tests as baseline).
+- [x] CI uses a GitHub-hosted Ubuntu runner and includes required system dependencies for DocDown checks.
+- [x] A CD workflow exists under `.github/workflows/cd.yml`.
+- [x] CD triggers on push to `main` (merge path).
+- [x] CD runs on a local hosted GitHub runner.
+- [x] CD performs a deploy step using a documented, repeatable command path.
+- [x] A rollback strategy is documented (retain previous release and restore command/path).
+- [x] Workflow docs describe required repository/environment secrets and runner prerequisites.
 
 ## Implementation Notes
 
