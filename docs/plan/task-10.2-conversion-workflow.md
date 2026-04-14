@@ -12,14 +12,14 @@ This task focuses on runtime operations for conversion jobs, not repository vali
 
 ## Acceptance Criteria
 
-- [ ] A conversion workflow model is documented (intake -> queue -> worker -> artifacts -> status).
-- [ ] Job states are defined and used consistently (`queued`, `running`, `succeeded`, `failed`, `retrying`).
-- [ ] Retry policy distinguishes transient failures from deterministic failures.
-- [ ] Artifact storage layout is defined for traceability (input, final markdown, logs, summary per job).
-- [ ] Idempotency strategy is documented (input hash + options).
-- [ ] Operational limits are documented (max input size/pages, timeout policy, concurrency caps).
-- [ ] A runbook exists for start/stop/restart, diagnosis, and recovery for the conversion worker/service.
-- [ ] CI/CD handoff to runtime workflow is documented (what CD deploys and what it restarts).
+- [x] A conversion workflow model is documented (intake -> queue -> worker -> artifacts -> status).
+- [x] Job states are defined and used consistently (`queued`, `running`, `succeeded`, `failed`, `retrying`).
+- [x] Retry policy distinguishes transient failures from deterministic failures.
+- [x] Artifact storage layout is defined for traceability (input, final markdown, logs, summary per job).
+- [x] Idempotency strategy is documented (input hash + options).
+- [x] Operational limits are documented (max input size/pages, timeout policy, concurrency caps).
+- [x] A runbook exists for start/stop/restart, diagnosis, and recovery for the conversion worker/service.
+- [x] CI/CD handoff to runtime workflow is documented (what CD deploys and what it restarts).
 
 ## Implementation Notes
 
@@ -153,12 +153,12 @@ Per job root:
 
 ### Delivery Plan (V1)
 
-1. Create ops repo structure (`jobs/queued`, `jobs/running`, `jobs/done`, `status`).
-2. Implement submit path (`workflow_dispatch` + JSON manifest validation).
-3. Implement claim/lock behavior on local runner.
-4. Implement conversion executor with standardized artifact layout.
-5. Publish status transitions and result links to submitter-visible location.
-6. Add runbook for restart, stuck-job recovery, and replay by `job_id`.
+1. [x] Create ops repo structure (`jobs/queued`, `jobs/running`, `jobs/done`, `status`).
+2. [x] Implement submit path (`workflow_dispatch` + JSON manifest validation).
+3. [x] Implement claim/lock behavior on local runner.
+4. [ ] Implement conversion executor with standardized artifact layout.
+5. [ ] Publish status transitions and result links to submitter-visible location via runner integration.
+6. [x] Add runbook for restart, stuck-job recovery, and replay by `job_id`.
 
 ## References
 
