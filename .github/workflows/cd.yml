@@ -69,22 +69,24 @@ jobs:
 
           required_tools=(qpdf pandoc gs)
           missing_tools=()
-          install_hints=()
           for tool in "${required_tools[@]}"; do
-            case "${tool}" in
-              gs)
-                install_hints+=("ghostscript (gs)")
-                ;;
-              *)
-                install_hints+=("${tool}")
-                ;;
-            esac
-
             if ! command -v "${tool}" >/dev/null 2>&1; then
               missing_tools+=("${tool}")
             fi
           done
           if [ "${#missing_tools[@]}" -gt 0 ]; then
+            install_hints=()
+            for tool in "${missing_tools[@]}"; do
+              case "${tool}" in
+                gs)
+                  install_hints+=("ghostscript (gs)")
+                  ;;
+                *)
+                  install_hints+=("${tool}")
+                  ;;
+              esac
+            done
+
             echo "Missing required system tools: ${missing_tools[*]}" >&2
             echo "Install packages on the runner host: ${install_hints[*]}." >&2
             exit 1
