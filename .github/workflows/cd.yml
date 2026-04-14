@@ -93,11 +93,32 @@ jobs:
           smoke_output_dir="${DOCDOWN_SHARED_DIR}/smoke/output"
           smoke_log="${smoke_output_dir}/run.log"
           smoke_stderr_log="${smoke_output_dir}/stderr.log"
+          smoke_input_dir="${DOCDOWN_SHARED_DIR}/smoke"
+          smoke_input_pdf="${smoke_input_dir}/input.pdf"
+          release_sample_pdf="${DOCDOWN_CURRENT_LINK}/sample-input.pdf"
+          release_sample_pdf_rich="${DOCDOWN_CURRENT_LINK}/sample-input-rich.pdf"
 
           rm -rf "${smoke_output_dir}"
-          mkdir -p "${smoke_output_dir}"
+          mkdir -p "${smoke_output_dir}" "${smoke_input_dir}"
+
+          if [ -e "${smoke_input_pdf}" ] && [ ! -f "${smoke_input_pdf}" ]; then
+            echo "Smoke input path exists but is not a regular file: ${smoke_input_pdf}" >&2
+            exit 1
+          fi
+
+          if [ ! -f "${smoke_input_pdf}" ] || [ ! -s "${smoke_input_pdf}" ]; then
+            if [ -f "${release_sample_pdf}" ] && [ -s "${release_sample_pdf}" ]; then
+              cp -f "${release_sample_pdf}" "${smoke_input_pdf}"
+            elif [ -f "${release_sample_pdf_rich}" ] && [ -s "${release_sample_pdf_rich}" ]; then
+              cp -f "${release_sample_pdf_rich}" "${smoke_input_pdf}"
+            else
+              echo "Smoke input missing at ${smoke_input_pdf} and no sample PDF found in release." >&2
+              exit 1
+            fi
+          fi
+
           "${DOCDOWN_CURRENT_LINK}/.venv/bin/docdown" \
-            "${DOCDOWN_SHARED_DIR}/smoke/input.pdf" \
+            "${smoke_input_pdf}" \
             --config "${DOCDOWN_CURRENT_LINK}/docdown.yaml" \
             -o "${smoke_output_dir}" \
             --log-level INFO \
