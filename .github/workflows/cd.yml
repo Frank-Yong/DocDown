@@ -101,10 +101,15 @@ jobs:
           rm -rf "${smoke_output_dir}"
           mkdir -p "${smoke_output_dir}" "${smoke_input_dir}"
 
-          if [ ! -s "${smoke_input_pdf}" ]; then
-            if [ -s "${release_sample_pdf}" ]; then
+          if [ -e "${smoke_input_pdf}" ] && [ ! -f "${smoke_input_pdf}" ]; then
+            echo "Smoke input path exists but is not a regular file: ${smoke_input_pdf}" >&2
+            exit 1
+          fi
+
+          if [ ! -f "${smoke_input_pdf}" ] || [ ! -s "${smoke_input_pdf}" ]; then
+            if [ -f "${release_sample_pdf}" ] && [ -s "${release_sample_pdf}" ]; then
               cp -f "${release_sample_pdf}" "${smoke_input_pdf}"
-            elif [ -s "${release_sample_pdf_rich}" ]; then
+            elif [ -f "${release_sample_pdf_rich}" ] && [ -s "${release_sample_pdf_rich}" ]; then
               cp -f "${release_sample_pdf_rich}" "${smoke_input_pdf}"
             else
               echo "Smoke input missing at ${smoke_input_pdf} and no sample PDF found in release." >&2
