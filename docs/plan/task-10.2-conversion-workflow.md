@@ -155,6 +155,7 @@ Per job root:
 
 - Node01 is configured as the active self-hosted CD runner and validated with a green smoke deploy.
 - Node02 remains configured as standby/fallback and should stay disabled unless failover is needed.
+- DocDownOps runner-loop setup runbook created for node01 primary and node02 standby operation.
 
 ### Delivery Plan (V1)
 
@@ -172,3 +173,4 @@ Per job root:
 - [task-10.1-ci-cd-pipeline.md](task-10.1-ci-cd-pipeline.md)
 - [../technical-design.md](../technical-design.md)
 - [../notes/2026-04-14_07-10-00.md](../notes/2026-04-14_07-10-00.md)
+- [../notes/2026-04-14_16-20-00-docdownops-runner-setup.md](../notes/2026-04-14_16-20-00-docdownops-runner-setup.md)
