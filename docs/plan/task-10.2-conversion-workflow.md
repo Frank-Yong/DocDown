@@ -151,6 +151,11 @@ Per job root:
 - Task 10.2 provides runtime conversion orchestration and operations policy.
 - CD should restart or reload the conversion service defined in this task.
 
+### Operational Verification (2026-04-14)
+
+- Node01 is configured as the active self-hosted CD runner and validated with a green smoke deploy.
+- Node02 remains configured as standby/fallback and should stay disabled unless failover is needed.
+
 ### Delivery Plan (V1)
 
 1. [x] Create ops repo structure (`jobs/queued`, `jobs/running`, `jobs/done`, `status`).
@@ -159,6 +164,7 @@ Per job root:
 4. [ ] Implement conversion executor with standardized artifact layout.
 5. [ ] Publish status transitions and result links to submitter-visible location via runner integration.
 6. [x] Add runbook for restart, stuck-job recovery, and replay by `job_id`.
+7. [x] Validate node01 primary CD runner end-to-end (registration, prerequisites, and smoke deploy).
 
 ## References
 

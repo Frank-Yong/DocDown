@@ -2,6 +2,12 @@
 
 Purpose: set up `node01` as the active DocDown CD runner, while keeping `node02` as standby fallback.
 
+Verification status (2026-04-14):
+
+- Node01 runner registration is healthy (`docdown-node01` shows `Idle`).
+- CD smoke test is green on node01.
+- Node02 is intended to remain disabled as standby unless failover is needed.
+
 Run these commands on `node01` as `clusteradmin`.
 
 ## 1) Create service account and directories
@@ -194,6 +200,11 @@ sudo systemctl enable actions.runner.Frank-Yong-DocDown.docdown-node02.service
 sudo bash -lc 'cd /home/docdown-runner/actions-runner && ./svc.sh start'
 sudo bash -lc 'cd /home/docdown-runner/actions-runner && ./svc.sh status'
 ```
+
+Current operating posture (2026-04-14):
+
+- Keep node02 runner service disabled by default.
+- Enable node02 only for failover or maintenance windows on node01.
 
 ## 10) Smoke test CD
 
