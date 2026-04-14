@@ -165,3 +165,4 @@ Per job root:
 - [task-10.0-ci-cd-prerequisites.md](task-10.0-ci-cd-prerequisites.md)
 - [task-10.1-ci-cd-pipeline.md](task-10.1-ci-cd-pipeline.md)
 - [../technical-design.md](../technical-design.md)
+- [../notes/2026-04-14_07-10-00.md](../notes/2026-04-14_07-10-00.md)
