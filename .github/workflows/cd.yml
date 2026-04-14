@@ -1,0 +1,177 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docdown-cd-main
+  cancel-in-progress: false
+
+env:
+  DOCDOWN_RELEASES_DIR: /opt/docdown/releases
+  DOCDOWN_CURRENT_LINK: /opt/docdown/current
+  DOCDOWN_SHARED_DIR: /opt/docdown/shared
+  DOCDOWN_WORKSPACE_DIR: /opt/docdown/workspace
+
+jobs:
+  deploy:
+    name: Deploy to local runner
+    timeout-minutes: 30
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+      - docdown
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Prepare release, activate, and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_id="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          release_dir="${DOCDOWN_RELEASES_DIR}/${release_id}"
+          previous_release=""
+
+          if [ -L "${DOCDOWN_CURRENT_LINK}" ]; then
+            previous_release="$(readlink -f "${DOCDOWN_CURRENT_LINK}" || true)"
+          fi
+
+          echo "PREVIOUS_RELEASE=${previous_release}" >> "${GITHUB_ENV}"
+
+          mkdir -p "${DOCDOWN_RELEASES_DIR}" "${DOCDOWN_SHARED_DIR}" "${DOCDOWN_WORKSPACE_DIR}"
+          rm -rf "${DOCDOWN_WORKSPACE_DIR}/repo"
+          cp -a "${GITHUB_WORKSPACE}" "${DOCDOWN_WORKSPACE_DIR}/repo"
+          rm -rf "${DOCDOWN_WORKSPACE_DIR}/repo/.git"
+
+          if [ -e "${release_dir}" ]; then
+            echo "Release directory already exists: ${release_dir}" >&2
+            exit 1
+          fi
+
+          mkdir "${release_dir}"
+          cp -a "${DOCDOWN_WORKSPACE_DIR}/repo/." "${release_dir}/"
+
+          if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'
+          then
+            echo "python3 must be >= 3.10 for DocDown deploy. Install Python 3.10+ on the runner host." >&2
+            python3 --version >&2 || true
+            exit 1
+          fi
+
+          python3 -m venv "${release_dir}/.venv"
+          "${release_dir}/.venv/bin/pip" install --upgrade pip
+
+          wheelhouse_dir="${DOCDOWN_SHARED_DIR}/wheelhouse"
+          if [ -d "${wheelhouse_dir}" ] && find "${wheelhouse_dir}" -maxdepth 1 -type f \( -name '*.whl' -o -name '*.tar.gz' \) | grep -q .; then
+            echo "Installing from local wheelhouse: ${wheelhouse_dir}"
+            "${release_dir}/.venv/bin/pip" install --no-index --find-links "${wheelhouse_dir}" "${release_dir}"
+          else
+            echo "Warning: wheelhouse not found/empty at ${wheelhouse_dir}; installing from package index." >&2
+            "${release_dir}/.venv/bin/pip" install "${release_dir}"
+          fi
+
+          sudo /usr/local/bin/docdown-activate-release "${release_dir}"
+          sudo /usr/bin/systemctl restart docdown-worker
+          sudo /usr/bin/systemctl restart docdown-api
+
+          smoke_output_dir="${DOCDOWN_SHARED_DIR}/smoke/output"
+          smoke_log="${smoke_output_dir}/run.log"
+          smoke_stderr_log="${smoke_output_dir}/stderr.log"
+
+          rm -rf "${smoke_output_dir}"
+          mkdir -p "${smoke_output_dir}"
+          "${DOCDOWN_CURRENT_LINK}/.venv/bin/docdown" \
+            "${DOCDOWN_SHARED_DIR}/smoke/input.pdf" \
+            --config "${DOCDOWN_CURRENT_LINK}/docdown.yaml" \
+            -o "${smoke_output_dir}" \
+            --log-level INFO \
+            2> >(tee "${smoke_stderr_log}" >&2)
+
+          test -s "${smoke_output_dir}/final.md"
+          grep -q "Run Summary" "${smoke_log}"
+
+          current_release=""
+          if [ -L "${DOCDOWN_CURRENT_LINK}" ]; then
+            current_release="$(readlink -f "${DOCDOWN_CURRENT_LINK}" || true)"
+          fi
+
+          # Keep the 5 newest release directories; remove older ones safely.
+          if ! find "${DOCDOWN_RELEASES_DIR}" \
+            -mindepth 1 \
+            -maxdepth 1 \
+            -type d \
+            -printf '%T@\t%p\0' | sort -z -n -r |
+            {
+              keep=0
+              while IFS= read -r -d '' entry; do
+                keep=$((keep + 1))
+                if [ "${keep}" -le 5 ]; then
+                  continue
+                fi
+
+                release_path="${entry#*$'\t'}"
+                if [ -n "${current_release}" ] && [ "${release_path}" = "${current_release}" ]; then
+                  continue
+                fi
+
+                rm -rf -- "${release_path}"
+              done
+            }
+          then
+            echo "Warning: release retention cleanup failed; continuing deployment." >&2
+          fi
+
+      - name: Roll back on failure
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -n "${PREVIOUS_RELEASE:-}" ] && [ -d "${PREVIOUS_RELEASE}" ]; then
+            echo "Rollback: restoring previous release ${PREVIOUS_RELEASE}"
+            sudo /usr/local/bin/docdown-activate-release "${PREVIOUS_RELEASE}"
+            sudo /usr/bin/systemctl restart docdown-worker
+            sudo /usr/bin/systemctl restart docdown-api
+            if [ -L "${DOCDOWN_CURRENT_LINK}" ]; then
+              echo "Rollback complete. Current link target: $(readlink -f "${DOCDOWN_CURRENT_LINK}" || true)"
+            fi
+          else
+            echo "Rollback skipped: PREVIOUS_RELEASE is empty or does not exist (${PREVIOUS_RELEASE:-<empty>})."
+            if [ -L "${DOCDOWN_CURRENT_LINK}" ]; then
+              echo "Current link target: $(readlink -f "${DOCDOWN_CURRENT_LINK}" || true)"
+            else
+              echo "Current link is not a symlink: ${DOCDOWN_CURRENT_LINK}"
+            fi
+          fi
+
+      - name: Deployment prerequisites
+        if: always()
+        run: |
+          cat <<'EOF'
+          Runner prerequisites:
+          - labels: self-hosted, linux, x64, docdown
+          - user: docdown-runner
+          - python: python3 must resolve to >= 3.10 with venv support (python3-venv)
+          - system tools: qpdf, pandoc, ghostscript
+          - optional for reproducible/offline deploys: populate /opt/docdown/shared/wheelhouse with dependency wheels
+          - writable paths: /opt/docdown, /opt/docdown/releases, /opt/docdown/shared, /opt/docdown/workspace
+          - privileged commands:
+            * /usr/local/bin/docdown-activate-release <release-path>
+            * /usr/bin/systemctl restart docdown-worker
+            * /usr/bin/systemctl restart docdown-api
+
+          Secrets:
+          - No mandatory repository secret for v1 local self-hosted deployment.
+          - Optional future secrets for remote orchestration:
+            * DOCDOWN_DEPLOY_HOST
+            * DOCDOWN_DEPLOY_SSH_KEY
+          EOF
