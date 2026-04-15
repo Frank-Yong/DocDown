@@ -27,11 +27,17 @@ This task focuses on runtime operations for conversion jobs, not repository vali
 
 The goal is to make conversion execution operationally safe in production. CI/CD should deploy and restart runtime components, while this task defines and stabilizes how conversion work is accepted, processed, and observed.
 
+### Terminology And Boundary
+
+- Task 10.1 CD runner: GitHub Actions self-hosted runner on node01 by default, with node02 as fallback for repository deployment workflow.
+- Task 10.2 ops runner: local DocDownOps polling service (`runner-loop.sh`) on node01 by default, with node02 as standby/failover for job execution.
+- These are separate runtime concerns even if they run on the same hosts.
+
 ### Operating Constraint
 
-- Conversion execution remains on a local self-hosted runner in LAN.
+- Conversion execution remains on a local LAN-hosted DocDownOps polling runner/service.
 - Submission and status must be available from anywhere with GitHub access.
-- Therefore, runtime orchestration should use GitHub as the control plane and local runner as the execution plane.
+- Therefore, runtime orchestration should use GitHub as the control plane and the DocDownOps local polling runner service as the execution plane.
 
 ### Recommended V1 Architecture
 
@@ -40,14 +46,14 @@ The goal is to make conversion execution operationally safe in production. CI/CD
   - workflow dispatch
   - issue/PR command
   - CLI that writes job manifests to ops repo
-- Local runner polls/claims jobs from ops repo and performs conversion.
+- DocDownOps local polling runner service polls/claims jobs from ops repo and performs conversion.
 - Results are published back to GitHub (artifacts and/or commit/PR), so submitter can access markdown remotely.
 
 ```mermaid
 flowchart LR
     U[Submitter Anywhere] --> G[GitHub API or Ops Repo]
     G --> Q[Job Manifest Queue]
-    Q --> R[Local LAN Runner Claims Job]
+    Q --> R[DocDownOps Polling Runner Claims Job]
     R --> C[DocDown Conversion]
     C --> A[Result Artifacts and Logs]
     A --> G
@@ -62,7 +68,7 @@ flowchart LR
 - Queue:
   - git-backed job manifests in ops repo (`jobs/queued/*.json`)
 - Worker:
-  - local runner claims by moving manifest to `jobs/running/`
+  - DocDownOps polling runner service claims by moving manifest to `jobs/running/`
   - isolated workdir per job (`/opt/docdown/workspace/jobs/<job_id>`)
 - Artifacts:
   - per-job output tree containing staged input, final markdown, logs, run summary
@@ -140,7 +146,7 @@ Per job root:
 - Max PDF size: 150 MB
 - Max pages: 1500
 - Max wall-clock per job: 30 minutes
-- Max concurrent jobs per runner: 1 (increase after soak)
+- Max concurrent jobs per DocDownOps polling runner service: 1 (increase after soak)
 - Retention:
   - keep last 30 days of artifacts
   - keep failure logs for 60 days
@@ -149,23 +155,25 @@ Per job root:
 
 - Task 10.1 provides CI/CD pipelines and deployment mechanics.
 - Task 10.2 provides runtime conversion orchestration and operations policy.
-- CD should restart or reload the conversion service defined in this task.
+- Task 10.1 CD runs through GitHub Actions on the DocDown self-hosted runner.
+- Task 10.2 execution runs through the DocDownOps local polling runner/service.
+- CD should restart or reload the conversion service defined in this task when that service is part of deployed runtime.
 
 ### Operational Verification (2026-04-14)
 
-- Node01 is configured as the active self-hosted CD runner and validated with a green smoke deploy.
-- Node02 remains configured as standby/fallback and should stay disabled unless failover is needed.
-- DocDownOps runner-loop setup runbook created for node01 primary and node02 standby operation.
+- Task 10.1: node01 is configured as the active GitHub Actions self-hosted CD runner and validated with a green smoke deploy.
+- Task 10.1: node02 remains configured as CD standby/fallback and should stay disabled unless failover is needed.
+- Task 10.2: DocDownOps runner-loop setup runbook is created for node01 primary and node02 standby local job execution.
 
 ### Delivery Plan (V1)
 
 1. [x] Create ops repo structure (`jobs/queued`, `jobs/running`, `jobs/done`, `status`).
 2. [x] Implement submit path (`workflow_dispatch` + JSON manifest validation).
-3. [x] Implement claim/lock behavior on local runner.
+3. [x] Implement claim/lock behavior in the DocDownOps polling runner service.
 4. [ ] Implement conversion executor with standardized artifact layout.
-5. [ ] Publish status transitions and result links to submitter-visible location via runner integration.
+5. [ ] Publish status transitions and result links to submitter-visible location via DocDownOps polling runner integration.
 6. [x] Add runbook for restart, stuck-job recovery, and replay by `job_id`.
-7. [x] Validate node01 primary CD runner end-to-end (registration, prerequisites, and smoke deploy).
+7. [x] Validate Task 10.1 node01 primary CD runner end-to-end (registration, prerequisites, and smoke deploy).
 
 ## References
 

@@ -459,7 +459,7 @@ Memory usage is bounded by the chunk size. A 50-page chunk typically requires < 
 | Environment       | Priority  | Notes                                                        |
 | ----------------- | --------- | ------------------------------------------------------------ |
 | Linux (local)     | Primary   | Ubuntu 22.04+ recommended. All tools available via apt/pip.  |
-| GitHub Actions    | Primary   | PR CI on `ubuntu-latest`; merge-to-main CD on local self-hosted runner. |
+| GitHub Actions    | Primary   | PR CI on `ubuntu-latest`; merge-to-main CD on local self-hosted GitHub Actions runner. |
 | Windows (local)   | Secondary | For debugging. Requires Docker Desktop or WSL2 for GROBID.   |
 
 ### 11.2 Python Version
