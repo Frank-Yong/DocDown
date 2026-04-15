@@ -35,7 +35,7 @@ Run from your operator shell on each node. The block below explicitly switches t
 
 If the executor script and related runner changes are not merged to `main` yet, use the active delivery branch instead of `main`. Current pre-merge branch:
 
-- `task/10.2-conversion-workflow`
+- `task/10.2-runner-loop`
 
 ```bash
 cat >/tmp/docdownops-clone-update.sh <<'EOF'
@@ -43,6 +43,7 @@ cat >/tmp/docdownops-clone-update.sh <<'EOF'
 set -euo pipefail
 
 DOCDOWNOPS_BRANCH="${DOCDOWNOPS_BRANCH:-task/10.2-conversion-workflow}"
+DOCDOWNOPS_BRANCH="${DOCDOWNOPS_BRANCH:-task/10.2-runner-loop}"
 
 sudo -u docdown-runner -H bash -lc '
   set -euo pipefail
@@ -185,3 +186,18 @@ sudo -u docdown-runner -H bash -lc 'cd /opt/docdown-ops/releases/docdownops-main
 
 With current scaffold, `runner-loop.sh` updates queue/status files in the local working copy.
 To make status globally visible through GitHub, ensure your operational process includes syncing these updates back to origin (for example, controlled commit/push flow or a wrapper service).
+
+## 10) Verified state as of 2026-04-15
+
+- node01:
+  - `/etc/default/docdownops-runner` exists.
+  - `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh` is present and executable.
+  - `docdownops-runner.service` is enabled and running.
+  - Healthy idle behavior is periodic `No queued jobs available to claim.` log entries while the service remains active.
+- node02:
+  - `/etc/default/docdownops-runner` exists.
+  - `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh` is present and executable.
+  - `docdownops-runner.service` remains disabled and inactive as standby default.
+
+Note:
+- If logs show `No queued jobs available to claim.` while the service stays active, that is normal idle polling behavior, not a fault condition.

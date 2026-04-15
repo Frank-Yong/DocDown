@@ -177,13 +177,18 @@ Per job root:
   - DocDownOps repo clone exists.
   - `/etc/default/docdownops-runner` exists.
   - `docdownops-runner.service` is installed and enabled.
-  - `docdownops-runner.service` is currently inactive.
-  - Repo-managed executor script should be installed at `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh`.
+  - `docdownops-runner.service` is active and polling normally on a 10-second interval.
+  - Repo-managed executor script is installed at `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh`.
+  - `runner-loop.sh` was corrected so `claim-job.sh` exit code `3` (`no queued jobs`) is treated as idle sleep instead of service failure.
+  - GitHub App credentials are installed outside the repository and readable by `docdown-runner`.
+  - GitHub App token minting and authenticated `git fetch` against `Frank-Yong/DocDownOps` are verified.
 - Task 10.2 / node02:
   - DocDownOps repo clone exists.
+  - `/etc/default/docdownops-runner` exists.
   - `docdownops-runner.service` is installed, disabled, and inactive as intended for standby.
-  - `/etc/default/docdownops-runner` is missing.
-  - Repo-managed executor script should be installed at `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh`.
+  - Repo-managed executor script is installed at `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh`.
+  - GitHub App credentials are installed outside the repository and readable by `docdown-runner`.
+  - GitHub App token minting and authenticated `git fetch` against `Frank-Yong/DocDownOps` are verified.
 
 ### Delivery Plan (V1)
 
@@ -208,16 +213,16 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
   - [x] Document node01 primary and node02 standby setup for the DocDownOps polling runner service.
   - [x] Install DocDownOps polling runner service on node01.
   - [x] Install DocDownOps polling runner service on node02.
-  - [ ] Enable/start node01 DocDownOps polling runner service.
+  - [x] Enable/start node01 DocDownOps polling runner service.
   - [x] Disable/stop node02 DocDownOps polling runner service as standby default.
-  - [ ] Configure `DOCDOWN_JOB_EXECUTOR` on node01.
-  - [ ] Configure `DOCDOWN_JOB_EXECUTOR` on node02.
+  - [x] Configure `DOCDOWN_JOB_EXECUTOR` on node01.
+  - [x] Configure `DOCDOWN_JOB_EXECUTOR` on node02.
 
 3. GitHub Writeback Credentials
-  - [ ] Choose node-local writeback auth strategy for DocDownOps (`GitHub App`, fine-grained PAT, or SSH key).
-  - [ ] Provision write-capable credentials on node01 for DocDownOps repo updates.
-  - [ ] Provision write-capable credentials on node02 for failover operation.
-  - [ ] Store credentials outside the repository in a host-local secure location (environment file, credential helper, or app flow).
+  - [x] Choose node-local writeback auth strategy for DocDownOps (`GitHub App`, fine-grained PAT, or SSH key).
+  - [x] Provision write-capable credentials on node01 for DocDownOps repo updates.
+  - [x] Provision write-capable credentials on node02 for failover operation.
+  - [x] Store credentials outside the repository in a host-local secure location (environment file, credential helper, or app flow).
   - [ ] Verify node01 can authenticate for fetch/pull/push against DocDownOps.
   - [ ] Verify node02 can authenticate for fetch/pull/push against DocDownOps.
 
@@ -256,8 +261,10 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
 
 ### Immediate Next Steps
 
-1. Pull/install repo-managed executor script `scripts/docdown-execute-manifest.sh` on node01 and node02 and point `DOCDOWN_JOB_EXECUTOR` to it.
-2. Create `/etc/default/docdownops-runner` on node02.
+1. Install the GitHub App token helper at a permanent host path and replace the temporary `/tmp/github-app-token.sh` usage on node01 and node02.
+2. Verify authenticated `git pull` and `git push` on node01 and node02 before wiring writeback into the polling runner.
+3. Implement and validate controlled git sync/writeback for `jobs/*` and `status/*` updates from the polling runner.
+4. Submit a real DocDownOps job through `workflow_dispatch` and verify end-to-end remote state progression and result publication.
 3. Start `docdownops-runner.service` on node01 and verify it reaches `active (running)`.
 4. Configure and verify writable GitHub credentials for DocDownOps writeback on node01 and node02.
 5. Run one end-to-end DocDownOps queued job and verify remote status/result publication.
