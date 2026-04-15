@@ -187,17 +187,18 @@ Per job root:
   - Temporary GitHub App validation branches have been deleted from origin.
   - Post-restart health with authenticated sync enabled is verified: periodic authenticated refresh shows `Already up to date.` and idle polling shows `No queued jobs available to claim.` while the service stays `active (running)`.
   - First live workflow-dispatched job (`20260415090651-ed80d4`) completed successfully through the sync-enabled runner path.
+  - Controlled failover was validated by stopping/disabling node01, activating node02, and completing a real workflow-dispatched job through the standby node.
 - Task 10.2 / node02:
   - DocDownOps repo clone exists.
   - `/etc/default/docdownops-runner` exists.
-  - `docdownops-runner.service` is installed, disabled, and inactive as intended for standby.
+  - `docdownops-runner.service` is installed and has been validated both as disabled standby and as active failover runner.
   - Repo-managed executor script is installed at `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh`.
   - GitHub App credentials are installed outside the repository and readable by `docdown-runner`.
   - GitHub App token minting and repo-managed authenticated `git fetch`, `git pull`, and `git push` are verified.
   - `scripts/docdown-execute-manifest.sh` now tracks executable mode from Git and the local checkout can be kept clean.
   - Writeback sync settings are appended in `/etc/default/docdownops-runner` (`DOCDOWN_GIT_SYNC_ENABLED=true`, deterministic runner commit identity).
   - Temporary GitHub App validation branches have been deleted from origin.
-  - Service is still intended to remain disabled/inactive as standby after the environment update.
+  - Controlled failover job `20260415102641-543c64` completed successfully through node02 with the same authenticated sync/writeback path and submitter-visible `result_url` publication.
 
 ### Delivery Plan (V1)
 
@@ -265,12 +266,12 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
   - [x] Verify status progression `queued -> running -> succeeded|failed` in the remote DocDownOps repo.
   - [x] Verify terminal manifest lands in `jobs/done/` in the remote DocDownOps repo.
   - [x] Verify result pointer is accessible to submitter.
-  - [ ] Test failover by stopping node01 DocDownOps polling runner service and activating node02.
-  - [ ] Confirm node02 can continue processing with the same credentials and writeback flow.
+  - [x] Test failover by stopping node01 DocDownOps polling runner service and activating node02.
+  - [x] Confirm node02 can continue processing with the same credentials and writeback flow.
 
 ### Immediate Next Steps
 
-1. Test failover by stopping node01, enabling node02, and confirming the same authenticated sync/writeback behavior on the standby node.
+1. Return to normal posture by re-enabling node01 and disabling node02 after the completed failover test.
 2. Add recovery guidance for push conflicts and failed local writeback operations.
 3. Remove the remaining manual username/password prompts from operator-side `git fetch` maintenance on node01/node02.
 

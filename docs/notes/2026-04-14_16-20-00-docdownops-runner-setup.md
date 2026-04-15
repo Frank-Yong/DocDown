@@ -166,7 +166,34 @@ sudo systemctl stop docdownops-runner.service
 sudo systemctl disable docdownops-runner.service
 
 # Run on node01
+sudo systemctl enable docdownops-runner.service
 sudo systemctl start docdownops-runner.service
+```
+
+Operator note:
+- If the checkout is behind on either node, update it as `docdown-runner` before starting the service.
+- Prefer `git reset --hard origin/<branch>` over interactive `git pull` when recovering a host-local checkout to a known branch tip.
+
+Credential-free operator maintenance commands:
+
+```bash
+# Run on node01 or node02 from the clusteradmin shell
+sudo -u docdown-runner -H bash -lc '
+  cd /opt/docdown-ops/releases/docdownops-main
+  scripts/git-github-app.sh fetch task/10.2-runner-loop
+  git checkout task/10.2-runner-loop
+  git reset --hard origin/task/10.2-runner-loop
+  git rev-parse --short HEAD
+'
+```
+
+For an authenticated fast-forward pull without the username/password prompt:
+
+```bash
+sudo -u docdown-runner -H bash -lc '
+  cd /opt/docdown-ops/releases/docdownops-main
+  scripts/git-github-app.sh pull task/10.2-runner-loop
+'
 ```
 
 ## 8) Basic runtime checks
@@ -192,12 +219,21 @@ To make status globally visible through GitHub, ensure your operational process 
 - node01:
   - `/etc/default/docdownops-runner` exists.
   - `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh` is present and executable.
-  - `docdownops-runner.service` is enabled and running.
+  - `docdownops-runner.service` was validated as the primary active runner and can be returned to that posture after failover tests.
   - Healthy idle behavior is periodic `No queued jobs available to claim.` log entries while the service remains active.
 - node02:
   - `/etc/default/docdownops-runner` exists.
   - `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh` is present and executable.
-  - `docdownops-runner.service` remains disabled and inactive as standby default.
+  - `docdownops-runner.service` remains disabled and inactive as standby default outside failover tests, but was validated successfully as the active runner during the 2026-04-15 failover exercise.
+
+Validated failover result:
+- node01 was stopped/disabled, node02 was enabled/started, and workflow-dispatched job `20260415102641-543c64` completed successfully through node02.
+- Remote writeback preserved the same behavior under failover:
+  - commit `c79da5f` enqueued the job
+  - commit `2433b52` marked it running
+  - commit `0ec5b17` recorded success
+  - `status/20260415102641-543c64.json` includes `result_url = https://github.com/Frank-Yong/DocDownOps/tree/task/10.2-runner-loop/results/20260415102641-543c64`
+  - `results/20260415102641-543c64/final.md` exists in the repo
 
 Note:
 - If logs show `No queued jobs available to claim.` while the service stays active, that is normal idle polling behavior, not a fault condition.
