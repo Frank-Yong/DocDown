@@ -186,6 +186,7 @@ Per job root:
   - Writeback sync settings are appended in `/etc/default/docdownops-runner` (`DOCDOWN_GIT_SYNC_ENABLED=true`, deterministic runner commit identity).
   - Temporary GitHub App validation branches have been deleted from origin.
   - Post-restart health with authenticated sync enabled is verified: periodic authenticated refresh shows `Already up to date.` and idle polling shows `No queued jobs available to claim.` while the service stays `active (running)`.
+  - First live workflow-dispatched job (`20260415090651-ed80d4`) completed successfully through the sync-enabled runner path.
 - Task 10.2 / node02:
   - DocDownOps repo clone exists.
   - `/etc/default/docdownops-runner` exists.
@@ -259,18 +260,18 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
   - [ ] Ensure failed jobs include a usable diagnostic message/log pointer.
 
 7. End-To-End Validation
-  - [ ] Submit a real DocDownOps job through `workflow_dispatch`.
-  - [ ] Verify node01 DocDownOps polling runner service claims the queued job.
-  - [ ] Verify status progression `queued -> running -> succeeded|failed` in the remote DocDownOps repo.
-  - [ ] Verify terminal manifest lands in `jobs/done/` in the remote DocDownOps repo.
+  - [x] Submit a real DocDownOps job through `workflow_dispatch`.
+  - [x] Verify node01 DocDownOps polling runner service claims the queued job.
+  - [x] Verify status progression `queued -> running -> succeeded|failed` in the remote DocDownOps repo.
+  - [x] Verify terminal manifest lands in `jobs/done/` in the remote DocDownOps repo.
   - [ ] Verify result pointer is accessible to submitter.
   - [ ] Test failover by stopping node01 DocDownOps polling runner service and activating node02.
   - [ ] Confirm node02 can continue processing with the same credentials and writeback flow.
 
 ### Immediate Next Steps
 
-1. Submit a real DocDownOps job through `workflow_dispatch` and verify end-to-end remote state progression and result publication.
-2. Confirm `jobs/running -> jobs/done` and `status/*` updates are written back to origin by the sync-enabled polling runner.
+1. Inspect node01 local workspace for job `20260415090651-ed80d4` and confirm expected artifacts (`output/final.md`, logs, `summary.json`).
+2. Implement publishable result pointer support so successful jobs populate `result_url` in `status/<job_id>.json`.
 3. Test failover by stopping node01, enabling node02, and confirming the same authenticated sync/writeback behavior on the standby node.
 
 8. Operational Hardening
