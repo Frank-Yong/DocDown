@@ -7,20 +7,26 @@ Important:
 - The "runner" here means the local `scripts/runner-loop.sh` service, not a GitHub Actions self-hosted runner.
 - All command blocks are intended to be executed from an operator shell (for example `clusteradmin`), not by logging in directly as `docdown-runner`.
 - Where file ownership or git operations must run as `docdown-runner`, commands already use `sudo -u docdown-runner` explicitly.
+- Paste-safe pattern: each section writes a temporary script file and executes it to avoid broken multi-line paste in SSH terminals.
 
 ## 1) Host prerequisites (run on node01 and node02 as clusteradmin)
 
 ```bash
+cat >/tmp/docdownops-host-prereq.sh <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
 sudo apt-get update
 sudo apt-get install -y git python3
 
 sudo groupadd --force docdown-runner
-if ! id -u docdown-runner >/dev/null 2>&1; then
-  sudo useradd --create-home --shell /bin/bash --gid docdown-runner docdown-runner
-fi
+id -u docdown-runner >/dev/null 2>&1 || sudo useradd --create-home --shell /bin/bash --gid docdown-runner docdown-runner
 
 sudo install -d -o docdown-runner -g docdown-runner /opt/docdown-ops
 sudo install -d -o docdown-runner -g docdown-runner /opt/docdown-ops/releases
+EOF
+
+bash /tmp/docdownops-host-prereq.sh
 ```
 
 ## 2) Clone DocDownOps working tree
@@ -28,6 +34,10 @@ sudo install -d -o docdown-runner -g docdown-runner /opt/docdown-ops/releases
 Run from your operator shell on each node. The block below explicitly switches to `docdown-runner`. Replace clone URL if you use SSH.
 
 ```bash
+cat >/tmp/docdownops-clone-update.sh <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
 sudo -u docdown-runner -H bash -lc '
   set -euo pipefail
   cd /opt/docdown-ops
@@ -39,6 +49,9 @@ sudo -u docdown-runner -H bash -lc '
   git checkout main
   git pull --ff-only origin main
 '
+EOF
+
+bash /tmp/docdownops-clone-update.sh
 ```
 
 ## 3) Configure executor command (node01 and node02)
@@ -49,12 +62,19 @@ sudo -u docdown-runner -H bash -lc '
 Create environment file:
 
 ```bash
-sudo tee /etc/default/docdownops-runner >/dev/null <<'EOF'
+cat >/tmp/docdownops-env-setup.sh <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+sudo tee /etc/default/docdownops-runner >/dev/null <<'EOS'
 DOCDOWN_JOB_EXECUTOR=/usr/local/bin/docdown-execute-manifest
-EOF
+EOS
 
 sudo chmod 640 /etc/default/docdownops-runner
 sudo chown root:docdown-runner /etc/default/docdownops-runner
+EOF
+
+bash /tmp/docdownops-env-setup.sh
 ```
 
 Notes:
@@ -65,7 +85,11 @@ Notes:
 ## 4) Install systemd service for runner-loop
 
 ```bash
-sudo tee /etc/systemd/system/docdownops-runner.service >/dev/null <<'EOF'
+cat >/tmp/docdownops-systemd-setup.sh <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+sudo tee /etc/systemd/system/docdownops-runner.service >/dev/null <<'EOS'
 [Unit]
 Description=DocDownOps Runner Loop
 After=network-online.target
@@ -83,9 +107,12 @@ RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
-EOF
+EOS
 
 sudo systemctl daemon-reload
+EOF
+
+bash /tmp/docdownops-systemd-setup.sh
 ```
 
 ## 5) Node01 primary mode
