@@ -33,10 +33,16 @@ bash /tmp/docdownops-host-prereq.sh
 
 Run from your operator shell on each node. The block below explicitly switches to `docdown-runner`. Replace clone URL if you use SSH.
 
+If the executor script and related runner changes are not merged to `main` yet, use the active delivery branch instead of `main`. Current pre-merge branch:
+
+- `task/10.2-conversion-workflow`
+
 ```bash
 cat >/tmp/docdownops-clone-update.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+
+DOCDOWNOPS_BRANCH="${DOCDOWNOPS_BRANCH:-task/10.2-conversion-workflow}"
 
 sudo -u docdown-runner -H bash -lc '
   set -euo pipefail
@@ -46,13 +52,15 @@ sudo -u docdown-runner -H bash -lc '
   fi
   cd releases/docdownops-main
   git fetch origin
-  git checkout main
-  git pull --ff-only origin main
+  git checkout '"'"'${DOCDOWNOPS_BRANCH}'"'"'
+  git pull --ff-only origin '"'"'${DOCDOWNOPS_BRANCH}'"'"'
 '
 EOF
 
 bash /tmp/docdownops-clone-update.sh
 ```
+
+Once the branch is merged, set `DOCDOWNOPS_BRANCH=main` before running the same block, or edit the default branch in the temporary script.
 
 ## 3) Configure executor command (node01 and node02)
 
