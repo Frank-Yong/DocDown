@@ -181,14 +181,22 @@ Per job root:
   - Repo-managed executor script is installed at `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh`.
   - `runner-loop.sh` was corrected so `claim-job.sh` exit code `3` (`no queued jobs`) is treated as idle sleep instead of service failure.
   - GitHub App credentials are installed outside the repository and readable by `docdown-runner`.
-  - GitHub App token minting and authenticated `git fetch` against `Frank-Yong/DocDownOps` are verified.
+  - GitHub App token minting and repo-managed authenticated `git fetch`, `git pull`, and `git push` are verified.
+  - `scripts/docdown-execute-manifest.sh` now tracks executable mode from Git and the local checkout can be kept clean.
+  - Writeback sync settings are appended in `/etc/default/docdownops-runner` (`DOCDOWN_GIT_SYNC_ENABLED=true`, deterministic runner commit identity).
+  - Temporary GitHub App validation branches have been deleted from origin.
+  - Post-restart health with authenticated sync enabled is verified: periodic authenticated refresh shows `Already up to date.` and idle polling shows `No queued jobs available to claim.` while the service stays `active (running)`.
 - Task 10.2 / node02:
   - DocDownOps repo clone exists.
   - `/etc/default/docdownops-runner` exists.
   - `docdownops-runner.service` is installed, disabled, and inactive as intended for standby.
   - Repo-managed executor script is installed at `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh`.
   - GitHub App credentials are installed outside the repository and readable by `docdown-runner`.
-  - GitHub App token minting and authenticated `git fetch` against `Frank-Yong/DocDownOps` are verified.
+  - GitHub App token minting and repo-managed authenticated `git fetch`, `git pull`, and `git push` are verified.
+  - `scripts/docdown-execute-manifest.sh` now tracks executable mode from Git and the local checkout can be kept clean.
+  - Writeback sync settings are appended in `/etc/default/docdownops-runner` (`DOCDOWN_GIT_SYNC_ENABLED=true`, deterministic runner commit identity).
+  - Temporary GitHub App validation branches have been deleted from origin.
+  - Service is still intended to remain disabled/inactive as standby after the environment update.
 
 ### Delivery Plan (V1)
 
@@ -223,8 +231,8 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
   - [x] Provision write-capable credentials on node01 for DocDownOps repo updates.
   - [x] Provision write-capable credentials on node02 for failover operation.
   - [x] Store credentials outside the repository in a host-local secure location (environment file, credential helper, or app flow).
-  - [ ] Verify node01 can authenticate for fetch/pull/push against DocDownOps.
-  - [ ] Verify node02 can authenticate for fetch/pull/push against DocDownOps.
+  - [x] Verify node01 can authenticate for fetch/pull/push against DocDownOps.
+  - [x] Verify node02 can authenticate for fetch/pull/push against DocDownOps.
 
 4. Polling Runner Writeback And Sync
   - [ ] Implement controlled git sync/writeback for the DocDownOps polling runner service.
@@ -261,13 +269,9 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
 
 ### Immediate Next Steps
 
-1. Install the GitHub App token helper at a permanent host path and replace the temporary `/tmp/github-app-token.sh` usage on node01 and node02.
-2. Verify authenticated `git pull` and `git push` on node01 and node02 before wiring writeback into the polling runner.
-3. Implement and validate controlled git sync/writeback for `jobs/*` and `status/*` updates from the polling runner.
-4. Submit a real DocDownOps job through `workflow_dispatch` and verify end-to-end remote state progression and result publication.
-3. Start `docdownops-runner.service` on node01 and verify it reaches `active (running)`.
-4. Configure and verify writable GitHub credentials for DocDownOps writeback on node01 and node02.
-5. Run one end-to-end DocDownOps queued job and verify remote status/result publication.
+1. Submit a real DocDownOps job through `workflow_dispatch` and verify end-to-end remote state progression and result publication.
+2. Confirm `jobs/running -> jobs/done` and `status/*` updates are written back to origin by the sync-enabled polling runner.
+3. Test failover by stopping node01, enabling node02, and confirming the same authenticated sync/writeback behavior on the standby node.
 
 8. Operational Hardening
   - [ ] Add stuck-job detection for aged entries in `jobs/running/`.
