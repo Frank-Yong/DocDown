@@ -165,6 +165,26 @@ Per job root:
 - Task 10.1: node02 remains configured as CD standby/fallback and should stay disabled unless failover is needed.
 - Task 10.2: DocDownOps runner-loop setup runbook is created for node01 primary and node02 standby local job execution.
 
+### Current Host Status (2026-04-15)
+
+- Task 10.1 / node01:
+  - GitHub Actions CD runner service is installed, enabled, and running.
+  - Deploy prerequisites are confirmed present: `python3`, `qpdf`, `pandoc`, `gs`, `/usr/local/bin/docdown-activate-release`, and `/opt/docdown/shared/wheelhouse`.
+- Task 10.1 / node02:
+  - GitHub Actions CD runner service is installed, disabled, and inactive as intended for standby.
+  - Deploy prerequisites are confirmed present: `python3`, `qpdf`, `pandoc`, `gs`, `/usr/local/bin/docdown-activate-release`, and `/opt/docdown/shared/wheelhouse`.
+- Task 10.2 / node01:
+  - DocDownOps repo clone exists.
+  - `/etc/default/docdownops-runner` exists.
+  - `docdownops-runner.service` is installed and enabled.
+  - `docdownops-runner.service` is currently inactive.
+  - Repo-managed executor script should be installed at `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh`.
+- Task 10.2 / node02:
+  - DocDownOps repo clone exists.
+  - `docdownops-runner.service` is installed, disabled, and inactive as intended for standby.
+  - `/etc/default/docdownops-runner` is missing.
+  - Repo-managed executor script should be installed at `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh`.
+
 ### Delivery Plan (V1)
 
 1. [x] Create ops repo structure (`jobs/queued`, `jobs/running`, `jobs/done`, `status`).
@@ -174,6 +194,79 @@ Per job root:
 5. [ ] Publish status transitions and result links to submitter-visible location via DocDownOps polling runner integration.
 6. [x] Add runbook for restart, stuck-job recovery, and replay by `job_id`.
 7. [x] Validate Task 10.1 node01 primary CD runner end-to-end (registration, prerequisites, and smoke deploy).
+
+### Detailed Delivery Checklist
+
+Use this checklist as the operational breakdown for the remaining Task 10.2 work.
+
+1. Control Plane Baseline
+  - [x] Create DocDownOps repo structure and queue/state layout.
+  - [x] Add GitHub-facing submit workflow for queued job creation.
+  - [x] Define job manifest contract and status model.
+
+2. Host And Service Setup
+  - [x] Document node01 primary and node02 standby setup for the DocDownOps polling runner service.
+  - [x] Install DocDownOps polling runner service on node01.
+  - [x] Install DocDownOps polling runner service on node02.
+  - [ ] Enable/start node01 DocDownOps polling runner service.
+  - [x] Disable/stop node02 DocDownOps polling runner service as standby default.
+  - [ ] Configure `DOCDOWN_JOB_EXECUTOR` on node01.
+  - [ ] Configure `DOCDOWN_JOB_EXECUTOR` on node02.
+
+3. GitHub Writeback Credentials
+  - [ ] Choose node-local writeback auth strategy for DocDownOps (`GitHub App`, fine-grained PAT, or SSH key).
+  - [ ] Provision write-capable credentials on node01 for DocDownOps repo updates.
+  - [ ] Provision write-capable credentials on node02 for failover operation.
+  - [ ] Store credentials outside the repository in a host-local secure location (environment file, credential helper, or app flow).
+  - [ ] Verify node01 can authenticate for fetch/pull/push against DocDownOps.
+  - [ ] Verify node02 can authenticate for fetch/pull/push against DocDownOps.
+
+4. Polling Runner Writeback And Sync
+  - [ ] Implement controlled git sync/writeback for the DocDownOps polling runner service.
+  - [ ] Fetch/rebase before local state updates are pushed.
+  - [ ] Commit status/history/manifest transitions with predictable commit messages.
+  - [ ] Push `jobs/running -> jobs/done` and `status/*` updates back to origin.
+  - [ ] Handle push conflicts/retries safely when multiple writers exist.
+  - [ ] Document recovery procedure for failed local commit/push operations.
+
+5. Conversion Executor Integration
+  - [ ] Implement `DOCDOWN_JOB_EXECUTOR` command contract for manifest-driven execution.
+  - [ ] Materialize per-job workspace under `/opt/docdown/workspace/jobs/<job_id>`.
+  - [ ] Stage input PDF from declared source.
+  - [ ] Run DocDown conversion with controlled config/options.
+  - [ ] Write standardized artifacts (`input/`, `output/`, `logs/`, `summary.json`).
+  - [ ] Classify failures as transient vs deterministic.
+  - [ ] Emit result URL or pointer when available.
+
+6. Status And Result Publication
+  - [ ] Publish `running`, `succeeded`, `failed`, and `retrying` states back to DocDownOps origin.
+  - [ ] Preserve attempt counts across retries.
+  - [ ] Append status transitions to `status/history/<job_id>.jsonl`.
+  - [ ] Publish submitter-visible result link (`artifact`, `commit`, or `pr`).
+  - [ ] Ensure failed jobs include a usable diagnostic message/log pointer.
+
+7. End-To-End Validation
+  - [ ] Submit a real DocDownOps job through `workflow_dispatch`.
+  - [ ] Verify node01 DocDownOps polling runner service claims the queued job.
+  - [ ] Verify status progression `queued -> running -> succeeded|failed` in the remote DocDownOps repo.
+  - [ ] Verify terminal manifest lands in `jobs/done/` in the remote DocDownOps repo.
+  - [ ] Verify result pointer is accessible to submitter.
+  - [ ] Test failover by stopping node01 DocDownOps polling runner service and activating node02.
+  - [ ] Confirm node02 can continue processing with the same credentials and writeback flow.
+
+### Immediate Next Steps
+
+1. Pull/install repo-managed executor script `scripts/docdown-execute-manifest.sh` on node01 and node02 and point `DOCDOWN_JOB_EXECUTOR` to it.
+2. Create `/etc/default/docdownops-runner` on node02.
+3. Start `docdownops-runner.service` on node01 and verify it reaches `active (running)`.
+4. Configure and verify writable GitHub credentials for DocDownOps writeback on node01 and node02.
+5. Run one end-to-end DocDownOps queued job and verify remote status/result publication.
+
+8. Operational Hardening
+  - [ ] Add stuck-job detection for aged entries in `jobs/running/`.
+  - [ ] Add replay-by-`job_id` operational procedure for failed jobs.
+  - [ ] Add retention/cleanup policy for old `jobs/done`, `status`, and artifacts.
+  - [ ] Define alert thresholds for queue depth, job age, and repeated push failures.
 
 ## References
 
