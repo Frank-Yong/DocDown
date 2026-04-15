@@ -236,27 +236,27 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
   - [x] Verify node02 can authenticate for fetch/pull/push against DocDownOps.
 
 4. Polling Runner Writeback And Sync
-  - [ ] Implement controlled git sync/writeback for the DocDownOps polling runner service.
-  - [ ] Fetch/rebase before local state updates are pushed.
-  - [ ] Commit status/history/manifest transitions with predictable commit messages.
-  - [ ] Push `jobs/running -> jobs/done` and `status/*` updates back to origin.
+  - [x] Implement controlled git sync/writeback for the DocDownOps polling runner service.
+  - [x] Fetch/rebase before local state updates are pushed.
+  - [x] Commit status/history/manifest transitions with predictable commit messages.
+  - [x] Push `jobs/running -> jobs/done` and `status/*` updates back to origin.
   - [ ] Handle push conflicts/retries safely when multiple writers exist.
   - [ ] Document recovery procedure for failed local commit/push operations.
 
 5. Conversion Executor Integration
-  - [ ] Implement `DOCDOWN_JOB_EXECUTOR` command contract for manifest-driven execution.
-  - [ ] Materialize per-job workspace under `/opt/docdown/workspace/jobs/<job_id>`.
-  - [ ] Stage input PDF from declared source.
-  - [ ] Run DocDown conversion with controlled config/options.
-  - [ ] Write standardized artifacts (`input/`, `output/`, `logs/`, `summary.json`).
+  - [x] Implement `DOCDOWN_JOB_EXECUTOR` command contract for manifest-driven execution.
+  - [x] Materialize per-job workspace under `/opt/docdown/workspace/jobs/<job_id>`.
+  - [x] Stage input PDF from declared source.
+  - [x] Run DocDown conversion with controlled config/options.
+  - [x] Write standardized artifacts (`input/`, `output/`, `logs/`, `summary.json`).
   - [ ] Classify failures as transient vs deterministic.
-  - [ ] Emit result URL or pointer when available.
+  - [x] Emit result URL or pointer when available.
 
 6. Status And Result Publication
-  - [ ] Publish `running`, `succeeded`, `failed`, and `retrying` states back to DocDownOps origin.
+  - [x] Publish `running`, `succeeded`, `failed`, and `retrying` states back to DocDownOps origin.
   - [ ] Preserve attempt counts across retries.
-  - [ ] Append status transitions to `status/history/<job_id>.jsonl`.
-  - [ ] Publish submitter-visible result link (`artifact`, `commit`, or `pr`).
+  - [x] Append status transitions to `status/history/<job_id>.jsonl`.
+  - [x] Publish submitter-visible result link (`artifact`, `commit`, or `pr`).
   - [ ] Ensure failed jobs include a usable diagnostic message/log pointer.
 
 7. End-To-End Validation
@@ -264,15 +264,15 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
   - [x] Verify node01 DocDownOps polling runner service claims the queued job.
   - [x] Verify status progression `queued -> running -> succeeded|failed` in the remote DocDownOps repo.
   - [x] Verify terminal manifest lands in `jobs/done/` in the remote DocDownOps repo.
-  - [ ] Verify result pointer is accessible to submitter.
+  - [x] Verify result pointer is accessible to submitter.
   - [ ] Test failover by stopping node01 DocDownOps polling runner service and activating node02.
   - [ ] Confirm node02 can continue processing with the same credentials and writeback flow.
 
 ### Immediate Next Steps
 
-1. Inspect node01 local workspace for job `20260415090651-ed80d4` and confirm expected artifacts (`output/final.md`, logs, `summary.json`).
-2. Implement publishable result pointer support so successful jobs populate `result_url` in `status/<job_id>.json`.
-3. Test failover by stopping node01, enabling node02, and confirming the same authenticated sync/writeback behavior on the standby node.
+1. Test failover by stopping node01, enabling node02, and confirming the same authenticated sync/writeback behavior on the standby node.
+2. Add recovery guidance for push conflicts and failed local writeback operations.
+3. Remove the remaining manual username/password prompts from operator-side `git fetch` maintenance on node01/node02.
 
 8. Operational Hardening
   - [ ] Add stuck-job detection for aged entries in `jobs/running/`.
