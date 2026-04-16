@@ -250,7 +250,7 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
   - [x] Stage input PDF from declared source.
   - [x] Run DocDown conversion with controlled config/options.
   - [x] Write standardized artifacts (`input/`, `output/`, `logs/`, `summary.json`).
-  - [ ] Classify failures as transient vs deterministic.
+  - [x] Classify failures as transient vs deterministic.
   - [x] Emit result URL or pointer when available.
 
 6. Status And Result Publication
@@ -273,7 +273,7 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
 
 1. Return to normal posture by re-enabling node01 and disabling node02 after the completed failover test.
 2. Remove the remaining manual username/password prompts from operator-side `git fetch` maintenance on node01/node02.
-3. Classify failures as transient vs deterministic for retry policy tuning.
+3. Add replay-by-`job_id` operational procedure for failed jobs.
 
 8. Operational Hardening
   - [ ] Add stuck-job detection for aged entries in `jobs/running/`.
