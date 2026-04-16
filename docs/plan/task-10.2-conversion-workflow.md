@@ -255,7 +255,7 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
 
 6. Status And Result Publication
   - [x] Publish `running`, `succeeded`, `failed`, and `retrying` states back to DocDownOps origin.
-  - [ ] Preserve attempt counts across retries.
+  - [x] Preserve attempt counts across retries.
   - [x] Append status transitions to `status/history/<job_id>.jsonl`.
   - [x] Publish submitter-visible result link (`artifact`, `commit`, or `pr`).
   - [ ] Ensure failed jobs include a usable diagnostic message/log pointer.
@@ -273,7 +273,7 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
 
 1. Return to normal posture by re-enabling node01 and disabling node02 after the completed failover test.
 2. Remove the remaining manual username/password prompts from operator-side `git fetch` maintenance on node01/node02.
-3. Preserve attempt counts across retries and include a stronger diagnostic pointer for failed jobs.
+3. Include a stronger diagnostic pointer for failed jobs.
 
 8. Operational Hardening
   - [ ] Add stuck-job detection for aged entries in `jobs/running/`.
