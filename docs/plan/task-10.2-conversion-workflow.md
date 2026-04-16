@@ -241,7 +241,7 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
   - [x] Fetch/rebase before local state updates are pushed.
   - [x] Commit status/history/manifest transitions with predictable commit messages.
   - [x] Push `jobs/running -> jobs/done` and `status/*` updates back to origin.
-  - [ ] Handle push conflicts/retries safely when multiple writers exist.
+  - [x] Handle push conflicts/retries safely when multiple writers exist.
   - [x] Document recovery procedure for failed local commit/push operations.
 
 5. Conversion Executor Integration
@@ -272,8 +272,8 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
 ### Immediate Next Steps
 
 1. Return to normal posture by re-enabling node01 and disabling node02 after the completed failover test.
-2. Handle push conflicts/retries safely when multiple writers exist.
-3. Remove the remaining manual username/password prompts from operator-side `git fetch` maintenance on node01/node02.
+2. Remove the remaining manual username/password prompts from operator-side `git fetch` maintenance on node01/node02.
+3. Preserve attempt counts across retries and include a stronger diagnostic pointer for failed jobs.
 
 8. Operational Hardening
   - [ ] Add stuck-job detection for aged entries in `jobs/running/`.
