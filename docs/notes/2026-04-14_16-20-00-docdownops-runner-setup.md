@@ -355,7 +355,7 @@ Expected precondition:
 sudo -u docdown-runner -H bash -lc '
   cd /opt/docdown-ops/releases/docdownops-main
   job_id=YOUR_JOB_ID
-  scripts/replay-job.sh ${job_id}
+  bash scripts/replay-job.sh ${job_id}
 '
 ```
 
@@ -365,7 +365,7 @@ Optional override (non-failed state only when intentionally required):
 sudo -u docdown-runner -H bash -lc '
   cd /opt/docdown-ops/releases/docdownops-main
   job_id=YOUR_JOB_ID
-  scripts/replay-job.sh ${job_id} --force
+  bash scripts/replay-job.sh ${job_id} --force
 '
 ```
 
@@ -388,12 +388,48 @@ Expected behavior:
 - next runner claim progresses state through `running -> succeeded|failed`
 - if sync is enabled, replay helper commits and pushes the queue/status update
 
-## 11) Current limitation to keep in mind
+## 11) Alert Threshold Configuration And Checks
+
+Use these settings to surface queue pressure and repeated sync failures in `docdownops-runner.service` logs.
+
+Suggested baseline in `/etc/default/docdownops-runner`:
+
+```bash
+cat >/tmp/docdownops-alert-thresholds.sh <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+sudo tee -a /etc/default/docdownops-runner >/dev/null <<'EOS'
+DOCDOWN_ALERT_QUEUE_DEPTH_THRESHOLD=10
+DOCDOWN_ALERT_QUEUED_AGE_SECONDS_THRESHOLD=900
+DOCDOWN_ALERT_SYNC_FAILURE_THRESHOLD=3
+DOCDOWN_ALERT_CHECK_INTERVAL_SECONDS=60
+EOS
+
+sudo systemctl restart docdownops-runner.service
+EOF
+
+bash /tmp/docdownops-alert-thresholds.sh
+```
+
+Verification commands:
+
+```bash
+sudo systemctl status docdownops-runner.service --no-pager
+sudo journalctl -u docdownops-runner.service -n 200 --no-pager | grep 'ALERT:' || true
+```
+
+Expected behavior:
+- queue depth alert: `ALERT: queue depth ... exceeds threshold ...`
+- queue age alert: `ALERT: oldest queued job age ... exceeds threshold ...`
+- sync failure alert: `ALERT: sync failures reached ... during refresh|writeback`
+
+## 12) Current limitation to keep in mind
 
 With current scaffold, `runner-loop.sh` updates queue/status files in the local working copy.
 To make status globally visible through GitHub, ensure your operational process includes syncing these updates back to origin (for example, controlled commit/push flow or a wrapper service).
 
-## 12) Verified state as of 2026-04-15
+## 13) Verified state as of 2026-04-15
 
 - node01:
   - `/etc/default/docdownops-runner` exists.
