@@ -273,11 +273,11 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
 
 1. Return to normal posture by re-enabling node01 and disabling node02 after the completed failover test.
 2. Remove the remaining manual username/password prompts from operator-side `git fetch` maintenance on node01/node02.
-3. Add replay-by-`job_id` operational procedure for failed jobs.
+3. Define alert thresholds for queue depth, job age, and repeated push failures.
 
 8. Operational Hardening
   - [x] Add stuck-job detection for aged entries in `jobs/running/`.
-  - [ ] Add replay-by-`job_id` operational procedure for failed jobs.
+  - [x] Add replay-by-`job_id` operational procedure for failed jobs.
   - [x] Add retention/cleanup policy for old `jobs/done`, `status`, and artifacts.
   - [ ] Define alert thresholds for queue depth, job age, and repeated push failures.
 

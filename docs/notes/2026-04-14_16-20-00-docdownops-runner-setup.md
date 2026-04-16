@@ -329,12 +329,71 @@ Expected healthy end state:
 - branch is on `task/10.2-runner-loop` (or the current active delivery branch)
 - service is active and returns to `No queued jobs available to claim.` while idle
 
-## 10) Current limitation to keep in mind
+## 10) Replay Failed Job By Job Id
+
+Use this when a failed job should be replayed with the same manifest after fixing environment/config/runtime conditions.
+
+1. Verify terminal failed state and identify target job id
+
+```bash
+sudo -u docdown-runner -H bash -lc '
+  cd /opt/docdown-ops/releases/docdownops-main
+  job_id=YOUR_JOB_ID
+  cat status/${job_id}.json
+  test -f jobs/done/${job_id}.json
+'
+```
+
+Expected precondition:
+- `status/<job_id>.json` shows `"state": "failed"`
+- `jobs/done/<job_id>.json` exists
+- no same-id manifest under `jobs/queued/` or `jobs/running/`
+
+2. Replay the job back to queue
+
+```bash
+sudo -u docdown-runner -H bash -lc '
+  cd /opt/docdown-ops/releases/docdownops-main
+  job_id=YOUR_JOB_ID
+  scripts/replay-job.sh ${job_id}
+'
+```
+
+Optional override (non-failed state only when intentionally required):
+
+```bash
+sudo -u docdown-runner -H bash -lc '
+  cd /opt/docdown-ops/releases/docdownops-main
+  job_id=YOUR_JOB_ID
+  scripts/replay-job.sh ${job_id} --force
+'
+```
+
+3. Verify replay writeback and reprocessing
+
+```bash
+sudo -u docdown-runner -H bash -lc '
+  cd /opt/docdown-ops/releases/docdownops-main
+  job_id=YOUR_JOB_ID
+  ls -la jobs/queued/${job_id}.json
+  tail -n 3 status/history/${job_id}.jsonl
+'
+
+sudo systemctl status docdownops-runner.service --no-pager
+sudo journalctl -u docdownops-runner.service -n 50 --no-pager
+```
+
+Expected behavior:
+- replay helper appends a new `queued` transition with message `Manual replay requested for job_id <job_id>`
+- next runner claim progresses state through `running -> succeeded|failed`
+- if sync is enabled, replay helper commits and pushes the queue/status update
+
+## 11) Current limitation to keep in mind
 
 With current scaffold, `runner-loop.sh` updates queue/status files in the local working copy.
 To make status globally visible through GitHub, ensure your operational process includes syncing these updates back to origin (for example, controlled commit/push flow or a wrapper service).
 
-## 11) Verified state as of 2026-04-15
+## 12) Verified state as of 2026-04-15
 
 - node01:
   - `/etc/default/docdownops-runner` exists.
