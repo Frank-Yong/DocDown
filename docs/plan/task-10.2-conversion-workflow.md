@@ -242,7 +242,7 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
   - [x] Commit status/history/manifest transitions with predictable commit messages.
   - [x] Push `jobs/running -> jobs/done` and `status/*` updates back to origin.
   - [ ] Handle push conflicts/retries safely when multiple writers exist.
-  - [ ] Document recovery procedure for failed local commit/push operations.
+  - [x] Document recovery procedure for failed local commit/push operations.
 
 5. Conversion Executor Integration
   - [x] Implement `DOCDOWN_JOB_EXECUTOR` command contract for manifest-driven execution.
@@ -272,7 +272,7 @@ Use this checklist as the operational breakdown for the remaining Task 10.2 work
 ### Immediate Next Steps
 
 1. Return to normal posture by re-enabling node01 and disabling node02 after the completed failover test.
-2. Add recovery guidance for push conflicts and failed local writeback operations.
+2. Handle push conflicts/retries safely when multiple writers exist.
 3. Remove the remaining manual username/password prompts from operator-side `git fetch` maintenance on node01/node02.
 
 8. Operational Hardening
