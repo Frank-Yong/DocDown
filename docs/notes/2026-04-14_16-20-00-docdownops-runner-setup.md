@@ -17,7 +17,7 @@ cat >/tmp/docdownops-host-prereq.sh <<'EOF'
 set -euo pipefail
 
 sudo apt-get update
-sudo apt-get install -y git python3
+sudo apt-get install -y git python3 qpdf pandoc ghostscript
 
 sudo groupadd --force docdown-runner
 id -u docdown-runner >/dev/null 2>&1 || sudo useradd --create-home --shell /bin/bash --gid docdown-runner docdown-runner
