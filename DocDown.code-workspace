@@ -4,6 +4,9 @@
 			"path": "."
 		},
 		{
+			"path": "../DocDownOps"
+		},
+		{
 			"path": "../Equinor"
 		}
 	]
