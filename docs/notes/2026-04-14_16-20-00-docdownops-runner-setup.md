@@ -440,8 +440,9 @@ Expected behavior:
 
 ## 12) Current limitation to keep in mind
 
-With current scaffold, `runner-loop.sh` updates queue/status files in the local working copy.
-To make status globally visible through GitHub, ensure your operational process includes syncing these updates back to origin (for example, controlled commit/push flow or a wrapper service).
+`runner-loop.sh` always updates queue/status files in the local working copy first.
+When `DOCDOWN_GIT_SYNC_ENABLED=true`, the configured sync/writeback flow (`scripts/sync-state.sh`) commits and pushes those updates so status is globally visible through GitHub.
+If sync/writeback is disabled, status remains local-only until an operator performs manual commit/push or equivalent controlled sync.
 
 ## 13) Verified state as of 2026-04-15
 
