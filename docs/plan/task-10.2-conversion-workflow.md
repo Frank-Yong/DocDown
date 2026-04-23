@@ -147,9 +147,12 @@ Per job root:
 - Max pages: 1500
 - Max wall-clock per job: 30 minutes
 - Max concurrent jobs per DocDownOps polling runner service: 1 (increase after soak)
-- Retention:
-  - keep last 30 days of artifacts
-  - keep failure logs for 60 days
+- Retention (controlled by DocDownOps runner env knobs; see rollout note for current configured values):
+  - `DOCDOWN_RETENTION_DONE_DAYS` for `jobs/done/` manifests
+  - `DOCDOWN_RETENTION_STATUS_DAYS` for terminal `status/<job_id>.json`
+  - `DOCDOWN_RETENTION_STATUS_HISTORY_DAYS` for `status/history/<job_id>.jsonl`
+  - `DOCDOWN_RETENTION_RESULTS_DAYS` for `results/<job_id>/` artifacts (including failure logs)
+  - Initial deployed defaults: 30 days for all of the above (aligned with rollout note `DOCDOWN_RETENTION_*_DAYS=30`).
 
 ### Integration Boundary With Task 10.1
 
