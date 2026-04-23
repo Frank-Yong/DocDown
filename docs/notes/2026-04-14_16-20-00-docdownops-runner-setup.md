@@ -42,7 +42,6 @@ cat >/tmp/docdownops-clone-update.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOCDOWNOPS_BRANCH="${DOCDOWNOPS_BRANCH:-task/10.2-conversion-workflow}"
 DOCDOWNOPS_BRANCH="${DOCDOWNOPS_BRANCH:-task/10.2-runner-loop}"
 
 sudo -u docdown-runner -H bash -lc '
