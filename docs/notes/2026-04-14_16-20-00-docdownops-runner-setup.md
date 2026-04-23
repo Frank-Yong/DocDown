@@ -403,12 +403,22 @@ cat >/tmp/docdownops-alert-thresholds.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-sudo tee -a /etc/default/docdownops-runner >/dev/null <<'EOS'
-DOCDOWN_ALERT_QUEUE_DEPTH_THRESHOLD=10
-DOCDOWN_ALERT_QUEUED_AGE_SECONDS_THRESHOLD=900
-DOCDOWN_ALERT_SYNC_FAILURE_THRESHOLD=3
-DOCDOWN_ALERT_CHECK_INTERVAL_SECONDS=60
-EOS
+sudo bash -c '
+  env_file=/etc/default/docdownops-runner
+  touch "$env_file"
+  ensure_kv() {
+    local key="$1"
+    local value="$2"
+    if ! grep -Eq "^[[:space:]]*${key}=" "$env_file"; then
+      printf "%s=%s\n" "$key" "$value" >> "$env_file"
+    fi
+  }
+
+  ensure_kv DOCDOWN_ALERT_QUEUE_DEPTH_THRESHOLD 10
+  ensure_kv DOCDOWN_ALERT_QUEUED_AGE_SECONDS_THRESHOLD 900
+  ensure_kv DOCDOWN_ALERT_SYNC_FAILURE_THRESHOLD 3
+  ensure_kv DOCDOWN_ALERT_CHECK_INTERVAL_SECONDS 60
+'
 
 sudo systemctl restart docdownops-runner.service
 EOF
