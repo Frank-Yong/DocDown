@@ -81,7 +81,7 @@ flowchart LR
 
 Job manifest fields:
 
-- `job_id`: unique id (`YYYYMMDDHHMMSS-<shortsha>-<nonce>`)
+- `job_id`: unique id (`YYYYMMDDHHMMSS-<shortsha>`)
 - `submitted_at`, `submitted_by`
 - `source`:
   - `type`: `git` | `upload`
