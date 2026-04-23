@@ -205,8 +205,8 @@ Per job root:
 1. [x] Create ops repo structure (`jobs/queued`, `jobs/running`, `jobs/done`, `status`).
 2. [x] Implement submit path (`workflow_dispatch` + JSON manifest validation).
 3. [x] Implement claim/lock behavior in the DocDownOps polling runner service.
-4. [ ] Implement conversion executor with standardized artifact layout.
-5. [ ] Publish status transitions and result links to submitter-visible location via DocDownOps polling runner integration.
+4. [x] Implement conversion executor with standardized artifact layout.
+5. [x] Publish status transitions and result links to submitter-visible location via DocDownOps polling runner integration.
 6. [x] Add runbook for restart, stuck-job recovery, and replay by `job_id`.
 7. [x] Validate Task 10.1 node01 primary CD runner end-to-end (registration, prerequisites, and smoke deploy).
 
