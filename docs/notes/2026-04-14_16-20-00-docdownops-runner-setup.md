@@ -76,6 +76,9 @@ set -euo pipefail
 
 sudo tee /etc/default/docdownops-runner >/dev/null <<'EOS'
 DOCDOWN_JOB_EXECUTOR=/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh
+DOCDOWN_GIT_SYNC_ENABLED=true
+DOCDOWN_GIT_COMMIT_NAME=DocDownOps Runner
+DOCDOWN_GIT_COMMIT_EMAIL=docdownops-runner@local
 EOS
 
 sudo chmod 640 /etc/default/docdownops-runner
@@ -88,6 +91,8 @@ bash /tmp/docdownops-env-setup.sh
 Notes:
 - `DOCDOWN_JOB_EXECUTOR` must exist and be executable by `docdown-runner`.
 - Current repo-managed V1 path: `/opt/docdown-ops/releases/docdownops-main/scripts/docdown-execute-manifest.sh`.
+- `DOCDOWN_GIT_SYNC_ENABLED=true` enables status/result writeback to origin, which the rest of this runbook assumes.
+- `DOCDOWN_GIT_COMMIT_NAME` and `DOCDOWN_GIT_COMMIT_EMAIL` keep runner-authored sync commits deterministic.
 - Executor should return exit code 0 on success, non-zero on failure.
 - If executor prints a URL in stdout, runner-loop captures first URL into `result_url`.
 
