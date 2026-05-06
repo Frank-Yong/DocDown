@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../Equinor"
+		},
+		{
+			"path": "../AkerBP"
 		}
 	]
 }
