@@ -162,8 +162,11 @@ def _copy_manifest_matches(source: Path, target: Path, manifest_path: Path) -> b
     if not isinstance(expected_source, dict) or not isinstance(expected_target, dict):
         return False
 
-    current_source = _source_fingerprint(source)
-    current_target = _target_fingerprint(target)
+    try:
+        current_source = _source_fingerprint(source)
+        current_target = _target_fingerprint(target)
+    except OSError:
+        return False
     return current_source == expected_source and current_target == expected_target
 
 

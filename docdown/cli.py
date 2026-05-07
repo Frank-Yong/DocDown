@@ -231,7 +231,7 @@ def main(
                 )
             )
             continue
-        except (PandocError, CleanupError) as exc:
+        except (PandocError, CleanupError, OSError) as exc:
             logger.error("Markdown conversion/cleanup failed for chunk-%04d: %s", result.chunk_number, exc)
             chunk_results.append(
                 ChunkResult(
