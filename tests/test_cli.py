@@ -373,8 +373,6 @@ def test_cli_continues_when_conversion_hits_oserror_for_one_chunk(tmp_path, monk
     call_count = {"count": 0}
 
     def _fake_convert(input_path, output_path, **kwargs):
-        _ = input_path
-        _ = kwargs
         call_count["count"] += 1
         if call_count["count"] == 1:
             raise OSError("disk full")
