@@ -394,6 +394,13 @@ def test_cli_continues_when_conversion_hits_oserror_for_one_chunk(tmp_path, monk
     result = runner.invoke(main, [str(dummy_pdf), "-o", str(tmp_path / "out")])
 
     assert result.exit_code == 0
+    assert call_count["count"] == 2
+    chunk_2_markdown = tmp_path / "out" / "markdown" / "chunk-0002.md"
+    assert chunk_2_markdown.exists()
+    assert chunk_2_markdown.read_text(encoding="utf-8") == "# ok"
+    assert "Chunks:         2" in result.stderr
+    assert "Successful:     1" in result.stderr
+    assert "Failed:         1 (chunk-0001: disk full)" in result.stderr
 
 
 def test_cli_surfaces_merge_errors(tmp_path, monkeypatch):
