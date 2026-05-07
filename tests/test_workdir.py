@@ -67,7 +67,7 @@ def test_stage_input_copy_fallback_is_idempotent(tmp_path, monkeypatch):
     original_copy2 = workdir_module.shutil.copy2
     copy_calls = 0
 
-    def _failing_symlink(self, target):
+    def _failing_symlink(self, target, *args, **kwargs):
         raise OSError("symlink disabled")
 
     def _counting_copy(src, dst, *, follow_symlinks=True):
@@ -93,9 +93,11 @@ def test_stage_input_falls_back_when_manifest_fingerprint_raises_oserror(tmp_pat
     original_copy2 = workdir_module.shutil.copy2
     copy_calls = 0
 
-    def _failing_symlink(self, target):
+    def _failing_symlink(self, target, *args, **kwargs):
         _ = self
         _ = target
+        _ = args
+        _ = kwargs
         raise OSError("symlink disabled")
 
     def _counting_copy(src, dst, *, follow_symlinks=True):
@@ -238,7 +240,7 @@ def test_stage_input_wraps_copy_oserror(tmp_path, monkeypatch):
     workdir = WorkDir(tmp_path / "output")
     workdir.ensure_structure()
 
-    def _failing_symlink(self, target):
+    def _failing_symlink(self, target, *args, **kwargs):
         raise OSError("symlink disabled")
 
     def _failing_copy(src, dst, *, follow_symlinks=True):
