@@ -85,6 +85,48 @@ def test_stage_input_copy_fallback_is_idempotent(tmp_path, monkeypatch):
     assert copy_calls == 1
 
 
+def test_stage_input_falls_back_when_manifest_fingerprint_raises_oserror(tmp_path, monkeypatch):
+    source = tmp_path / "source.pdf"
+    source.write_bytes(b"%PDF-1.4\n")
+
+    workdir = WorkDir(tmp_path / "output")
+    original_copy2 = workdir_module.shutil.copy2
+    copy_calls = 0
+
+    def _failing_symlink(self, target):
+        _ = self
+        _ = target
+        raise OSError("symlink disabled")
+
+    def _counting_copy(src, dst, *, follow_symlinks=True):
+        nonlocal copy_calls
+        copy_calls += 1
+        return original_copy2(src, dst, follow_symlinks=follow_symlinks)
+
+    monkeypatch.setattr(Path, "symlink_to", _failing_symlink)
+    monkeypatch.setattr("docdown.workdir.shutil.copy2", _counting_copy)
+
+    first = workdir.stage_input(source)
+    assert copy_calls == 1
+
+    original_source_fingerprint = workdir_module._source_fingerprint
+    fingerprint_calls = {"count": 0}
+
+    def _raise_once_fingerprint(path):
+        fingerprint_calls["count"] += 1
+        if fingerprint_calls["count"] == 1:
+            raise OSError("stat failed")
+        return original_source_fingerprint(path)
+
+    monkeypatch.setattr("docdown.workdir._source_fingerprint", _raise_once_fingerprint)
+
+    second = workdir.stage_input(source)
+
+    assert second == first
+    assert second.exists()
+    assert copy_calls == 2
+
+
 def test_artifact_path_generation_for_chunk_outputs(tmp_path):
     workdir = WorkDir(tmp_path / "output")
 
